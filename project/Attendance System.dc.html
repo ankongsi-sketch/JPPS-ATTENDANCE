@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="./industry.css">
+<style>
+:root{--color-accent:#1651a1;--color-accent-100:#edf3fc;--color-accent-200:#d6e3f7;--color-accent-300:#a9c3ec;--color-accent-400:#6f97d6;--color-accent-500:#2f66b5;--color-accent-600:#134a92;--color-accent-700:#10407f;--color-accent-800:#0d3366;--color-accent-900:#0a2449;--color-accent-2:#157c3e;--color-accent-2-100:#ebf6ee;--color-accent-2-200:#cfeAd8;--color-accent-2-300:#a3d6b0;--color-accent-2-400:#5fae6e;--color-accent-2-500:#2a9150;--color-accent-2-600:#157c3e;--color-accent-2-700:#106733;--color-accent-2-800:#0c5128;--color-accent-2-900:#083a1d}
+body{margin:0;background:var(--color-neutral-200)}
+a{color:var(--color-accent-700)}a:hover{color:var(--color-accent-800)}
+input,select,button,textarea{font-family:inherit}
+@keyframes scanline{from{top:6%}to{top:92%}}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:scale(1);opacity:1}}
+.dv-turn{padding:44px 48px 40px;scroll-margin-top:16px}.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 8px}.dv-tid{font:600 11px var(--font-body);padding:3px 7px;background:var(--color-text);color:var(--color-bg);text-decoration:none}.dv-tname{font:600 22px/1.2 var(--font-heading)}.dv-opts{display:flex;flex-wrap:wrap;gap:40px;align-items:flex-start}.dv-opt{flex:none;display:flex;flex-direction:column;gap:10px;scroll-margin-top:16px}.dv-oid{font:600 11px var(--font-body);padding:2px 7px;background:color-mix(in srgb,var(--color-text) 10%,transparent);color:var(--color-text);text-decoration:none}.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 13px/1.3 var(--font-body);color:var(--color-neutral-700)}.dv-opt:target .dv-oid{background:var(--color-accent);color:var(--color-bg)}.dv-next{margin:28px 0 0;font:13px/1.5 var(--font-body);color:var(--color-neutral-700)}
+</style>
+</helmet>
+<section class="dv-turn" id="t2" style="border-bottom:1px solid var(--color-divider)">
+  <div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Single-page check-in, following your reference</span></div>
+  <p style="max-width:760px;margin:0 0 32px;font:400 14px/1.55 var(--font-body);color:var(--color-neutral-800);text-wrap:pretty">This uses the reference's structure: an event banner, a Present/Absent choice, a 4-digit PIN that reveals the form, a confirmation toast, Close form, and an analysis panel with Copy to Excel. It stays in the Industry style. The QR opens this page. Tap <b>Admin</b> in the banner to rename the program, change the PIN, close the form, delete records or export. The demo PIN is <b>{{ pinHint }}</b>.</p>
+  <div class="dv-opts">
+    <div class="dv-opt" id="2a">
+      <div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Working prototype · one page for participants, Admin mode for the secretariat</div>
+      <div style="width:390px;height:844px;border-radius:54px;background:#1d1f20;padding:11px;box-shadow:var(--shadow-lg)">
+        <div style="position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+          <div style="position:absolute;top:0;left:0;right:0;z-index:3;height:54px;display:flex;align-items:center;justify-content:space-between;padding:6px 32px 0;font:600 15px var(--font-body);color:var(--color-bg)"><span>9:41</span><div style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:3px;padding:1.5px"><div style="width:80%;height:100%;background:currentColor"></div></div></div>
+
+          <sc-if value="{{ toastOn }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute;top:58px;left:16px;right:16px;z-index:5;background:var(--color-accent-2-700);color:var(--color-bg);padding:14px 16px;display:flex;align-items:center;gap:10px;font:500 15px/1.3 var(--font-body);box-shadow:var(--shadow-lg);border-left:3px solid var(--color-accent-2-300)">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>
+              <span>{{ toast }}</span>
+            </div>
+          </sc-if>
+
+          <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column">
+            <div style="background:var(--color-accent);color:var(--color-bg);padding:68px 22px 26px;display:flex;flex-direction:column;gap:16px;border-bottom:5px solid var(--color-accent-2)">
+              <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+                <div style="display:flex;align-items:center;gap:10px;min-width:0">
+                  <img src="assets/jpps-logo.png" alt="Jabatan Perkhidmatan Pembetungan Sarawak logo" style="width:46px;height:46px;flex:none;object-fit:contain;background:var(--color-bg);border-radius:50%;padding:2px">
+                  <span style="font:500 11px/1.25 var(--font-body);color:var(--color-bg)">Jabatan Perkhidmatan<br>Pembetungan Sarawak</span>
+                </div>
+                <button onClick="{{ toggleAdmin }}" class="btn" style="min-height:34px;font-size:13px;color:var(--color-bg);border-color:{{ adminBtnBorder }};background:{{ adminBtnBg }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>{{ adminLabel }}</button>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:6px;padding-top:8px">
+                <span style="font:500 11px var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-200)">Attendance system</span>
+                <span style="font:600 32px/1.05 var(--font-heading);letter-spacing:-.015em;text-wrap:pretty">{{ prog2.name }}</span>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;border-top:1px solid color-mix(in srgb,var(--color-bg) 25%,transparent);padding-top:12px;font:400 13px/1.35 var(--font-body)">
+                <div style="display:flex;flex-direction:column"><span style="color:var(--color-accent-200);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Date</span><span>{{ prog2.dates }}</span></div>
+                <div style="display:flex;flex-direction:column"><span style="color:var(--color-accent-200);font-size:11px;letter-spacing:.08em;text-transform:uppercase">Venue</span><span>{{ prog2.venue }}</span></div>
+              </div>
+            </div>
+
+            <div style="padding:24px 20px 44px;display:flex;flex-direction:column;gap:28px">
+
+              <sc-if value="{{ admin }}" hint-placeholder-val="{{ false }}">
+                <div class="blueprint" style="padding:16px;display:flex;flex-direction:column;gap:14px;border-color:var(--color-accent)">
+                  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                  <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 20px var(--font-heading)">Admin</span><span class="tag tag-accent">Secretariat only</span></div>
+                  <div class="field"><label>Program name</label><textarea class="input" rows="2" value="{{ prog2.name }}" onChange="{{ setProg2Name }}" style="min-height:60px;font-size:15px;resize:none"></textarea></div>
+                  <div class="field"><label>Program dates</label><input class="input" value="{{ prog2.dates }}" onChange="{{ setProg2Dates }}" style="min-height:44px"></div>
+                  <div style="display:grid;grid-template-columns:1fr 96px;gap:10px">
+                    <div class="field" style="min-width:0"><label>Venue</label><input class="input" value="{{ prog2.venue }}" onChange="{{ setProg2Venue }}" style="min-height:44px"></div>
+                    <div class="field"><label>PIN</label><input class="input" value="{{ prog2.pin }}" onChange="{{ setProg2Pin }}" inputmode="numeric" maxlength="4" style="min-height:44px;font-size:17px;letter-spacing:.2em;text-align:center"></div>
+                  </div>
+                  <div style="display:flex;gap:14px;align-items:center">
+                    <div style="width:92px;height:92px;flex:none;padding:5px;border:1px solid var(--color-divider)">
+                      <div style="display:grid;grid-template-columns:repeat(25,1fr);width:100%;height:100%">
+                        <sc-for list="{{ qrCells }}" as="c" hint-placeholder-count="0"><div style="background:{{ c.bg }}"></div></sc-for>
+                      </div>
+                    </div>
+                    <span style="font:400 13px/1.4 var(--font-body);color:var(--color-neutral-700)">Display this QR in the room. It opens this page. Share the PIN out loud at the start of the meeting.</span>
+                  </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                    <button onClick="{{ toggleClosed }}" class="btn btn-secondary" style="min-height:46px;font-size:15px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>{{ closeLabel }}</button>
+                    <button onClick="{{ printReport2 }}" class="btn btn-primary blueprint" style="min-height:46px;font-size:15px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>PDF report</button>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ formOpen }}" hint-placeholder-val="{{ true }}">
+                <div class="blueprint" style="padding:18px 16px;display:flex;flex-direction:column;gap:20px">
+                  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <span style="font:600 20px var(--font-heading)">Attendance status</span>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                      <sc-for list="{{ statusTiles }}" as="t" hint-placeholder-count="2">
+                        <button onClick="{{ t.onPick }}" style="min-height:104px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;cursor:pointer;border:{{ t.border }};background:{{ t.bg }};color:{{ t.fg }};font:600 18px var(--font-heading);letter-spacing:.04em;text-transform:uppercase">
+                          <span style="width:30px;height:30px;display:flex;align-items:center;justify-content:center;border:1.5px solid currentColor;font:400 18px/1 var(--font-body)">{{ t.glyph }}</span>
+                          {{ t.label }}
+                        </button>
+                      </sc-for>
+                    </div>
+                    <sc-if value="{{ err2.status }}" hint-placeholder-val="{{ false }}"><span style="font:500 13px var(--font-body);color:oklch(0.5 0.15 30)">{{ err2.status }}</span></sc-if>
+                  </div>
+
+                  <sc-if value="{{ needPin }}" hint-placeholder-val="{{ true }}">
+                    <div style="display:flex;flex-direction:column;gap:10px">
+                      <span style="font:600 20px var(--font-heading)">Enter PIN (4 digits)</span>
+                      <div style="display:flex;gap:10px;justify-content:center">
+                        <sc-for list="{{ pinBoxes }}" as="b" hint-placeholder-count="4">
+                          <input ref="{{ b.ref }}" value="{{ b.v }}" onChange="{{ b.onChange }}" onKeyDown="{{ b.onKey }}" inputmode="numeric" maxlength="1" class="input" style="width:56px;height:64px;text-align:center;font:600 28px var(--font-heading);padding:0;border-color:{{ b.border }}">
+                        </sc-for>
+                      </div>
+                      <span style="font:400 13px var(--font-body);color:{{ pinMsgColor }};text-align:center">{{ pinMsg }}</span>
+                    </div>
+                  </sc-if>
+
+                  <sc-if value="{{ pinOk }}" hint-placeholder-val="{{ false }}">
+                    <div style="display:flex;flex-direction:column;gap:16px">
+                      <div class="field">
+                        <label>Full name</label>
+                        <input class="input" value="{{ f2.name }}" onChange="{{ on2Name }}" placeholder="e.g. Nurul Ain binti Jamil" style="min-height:48px;font-size:16px;border-color:{{ b2Name }}">
+                        <sc-if value="{{ err2.name }}" hint-placeholder-val="{{ false }}"><div style="font:500 13px var(--font-body);color:oklch(0.5 0.15 30);margin-top:5px">{{ err2.name }}</div></sc-if>
+                      </div>
+                      <div class="field">
+                        <label>Grade</label>
+                        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:6px">
+                          <sc-for list="{{ gradeChips2 }}" as="g" hint-placeholder-count="8">
+                            <button onClick="{{ g.onPick }}" class="btn" style="min-height:40px;font-size:14px;background:{{ g.bg }};color:{{ g.fg }};border-color:{{ g.border }}">{{ g.label }}</button>
+                          </sc-for>
+                        </div>
+                        <sc-if value="{{ gradeOther }}" hint-placeholder-val="{{ false }}"><input class="input" value="{{ f2.gradeOther }}" onChange="{{ on2GradeOther }}" placeholder="Type your grade" style="min-height:44px;font-size:16px;margin-top:8px;text-transform:uppercase"></sc-if>
+                        <sc-if value="{{ err2.grade }}" hint-placeholder-val="{{ false }}"><div style="font:500 13px var(--font-body);color:oklch(0.5 0.15 30);margin-top:5px">{{ err2.grade }}</div></sc-if>
+                      </div>
+                      <sc-if value="{{ showDept }}" hint-placeholder-val="{{ true }}">
+                        <div class="field">
+                          <label>Department / unit</label>
+                          <select class="input" value="{{ f2.dept }}" onChange="{{ on2Dept }}" style="min-height:48px;font-size:16px;border-color:{{ b2Dept }}">
+                            <option value="">Select department</option>
+                            <sc-for list="{{ depts }}" as="d" hint-placeholder-count="0"><option value="{{ d }}">{{ d }}</option></sc-for>
+                          </select>
+                          <sc-if value="{{ err2.dept }}" hint-placeholder-val="{{ false }}"><div style="font:500 13px var(--font-body);color:oklch(0.5 0.15 30);margin-top:5px">{{ err2.dept }}</div></sc-if>
+                        </div>
+                      </sc-if>
+                      <sc-if value="{{ isAbsent }}" hint-placeholder-val="{{ false }}">
+                        <div class="field"><label>Reason for absence</label><input class="input" value="{{ f2.reason }}" onChange="{{ on2Reason }}" placeholder="e.g. Medical leave, on site" style="min-height:48px;font-size:16px"></div>
+                      </sc-if>
+                      <div style="display:flex;gap:10px;padding:12px 14px;background:var(--color-accent-100);color:var(--color-accent-800);font:500 14px/1.4 var(--font-body)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path></svg>
+                        <span>Tap Submit attendance to complete your record. Today's date is added automatically.</span>
+                      </div>
+                      <button onClick="{{ submit2 }}" class="btn btn-primary blueprint" style="width:100%;min-height:56px;font-size:19px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Submit attendance</button>
+                    </div>
+                  </sc-if>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ closed }}" hint-placeholder-val="{{ false }}">
+                <div class="blueprint" style="padding:28px 18px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+                  <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                  <span style="font:600 22px var(--font-heading)">Attendance form is closed</span>
+                  <span style="font:400 14px/1.45 var(--font-body);color:var(--color-neutral-700)">Please contact the secretariat if you have not recorded your attendance.</span>
+                </div>
+              </sc-if>
+
+              <div class="blueprint" style="padding:18px 16px;display:flex;flex-direction:column;gap:16px">
+                <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                <div style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+                  <span style="font:600 20px var(--font-heading)">Attendance analysis</span>
+                  <button onClick="{{ copyExcel }}" class="btn btn-secondary" style="min-height:38px;font-size:14px"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>Copy to Excel</button>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--color-divider)">
+                  <div style="padding:14px;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;align-items:center;gap:2px;background:var(--color-accent-2-100)"><span style="font:600 40px/1 var(--font-heading);color:var(--color-accent-2-700)">{{ presentN }}</span><span style="font:400 13px var(--font-body);color:var(--color-accent-2-800)">Present</span></div>
+                  <div style="padding:14px;display:flex;flex-direction:column;align-items:center;gap:2px"><span style="font:600 40px/1 var(--font-heading)">{{ absentN }}</span><span style="font:400 13px var(--font-body);color:var(--color-neutral-700)">Absent</span></div>
+                </div>
+                <sc-if value="{{ recsEmpty }}" hint-placeholder-val="{{ false }}"><span style="font:400 14px var(--font-body);color:var(--color-neutral-700);text-align:center;padding:8px 0">No records yet today</span></sc-if>
+                <div style="display:flex;flex-direction:column">
+                  <sc-for list="{{ recRows }}" as="r" hint-placeholder-count="3">
+                    <div style="display:flex;gap:10px;align-items:center;padding:11px 6px;border-bottom:1px solid var(--color-divider);background:{{ r.bg }}">
+                      <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:3px">
+                        <span style="font:600 14px var(--font-body);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap"><span class="{{ r.tagClass }}">{{ r.statusLabel }}</span><span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">{{ r.meta }}</span></div>
+                      </div>
+                      <div style="display:flex;flex-direction:column;align-items:flex-end;font:400 12px/1.4 var(--font-body);color:var(--color-neutral-700);font-variant-numeric:tabular-nums"><span>{{ r.dateShort }}</span><span style="font-weight:500;color:var(--color-text)">{{ r.time }}</span></div>
+                      <sc-if value="{{ admin }}" hint-placeholder-val="{{ false }}">
+                        <button onClick="{{ r.onDelete }}" class="btn btn-icon" title="Delete record" style="width:36px;height:36px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"></path><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path></svg></button>
+                      </sc-if>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--color-text)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="dv-next">Try next: "switch <a class="dv-oid" href="#2a">2a</a> to Bahasa Melayu" · "drop the PIN step" · "add the meeting history from <a class="dv-oid" href="#1a">1a</a> to Admin"</p>
+</section>
+<section class="dv-turn" id="t1">
+  <div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Meeting attendance · Jabatan Perkhidmatan Pembetungan Sarawak</span></div>
+  <p style="max-width:760px;margin:0 0 32px;font:400 14px/1.55 var(--font-body);color:var(--color-neutral-800);text-wrap:pretty">Participant scans the meeting QR, taps <b>Kehadiran</b>, and submits name, grade and department; the date is filled in automatically. The secretariat phone manages meetings, renames them, shows the QR, watches check-ins live and generates the report. Both phones in <a class="dv-oid" href="#1a">1a</a> share data, so a check-in on the left appears on the right. Department list and grades are placeholders to replace with JPPS's own.</p>
+  <div class="dv-opts">
+
+    <div class="dv-opt" id="1a">
+      <div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Working prototype · participant + secretariat</div>
+      <div style="display:flex;gap:40px;flex-wrap:wrap;align-items:flex-start">
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 12px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Participant</span>
+          <div style="width:390px;height:844px;border-radius:54px;background:#1d1f20;padding:11px;box-shadow:var(--shadow-lg)">
+            <div style="position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+
+              <sc-if value="{{ isScan }}" hint-placeholder-val="{{ true }}">
+                <div style="position:absolute;inset:0;background:var(--color-accent-900);color:var(--color-bg);display:flex;flex-direction:column">
+                  <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 32px 0;font:600 15px var(--font-body)"><span>9:41</span><div style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:3px;padding:1.5px"><div style="width:80%;height:100%;background:currentColor"></div></div></div>
+                  <div style="padding:28px 28px 0;display:flex;flex-direction:column;gap:6px">
+                    <span style="font:500 11px var(--font-body);letter-spacing:.1em;text-transform:uppercase;color:var(--color-accent-300)">Step 1 of 3</span>
+                    <span style="font:600 34px/1.1 var(--font-heading)">Scan meeting QR</span>
+                    <span style="font:400 15px/1.45 var(--font-body);color:var(--color-accent-200)">Point your camera at the QR code shown in the meeting room.</span>
+                  </div>
+                  <div style="flex:1;display:flex;align-items:center;justify-content:center">
+                    <div style="position:relative;width:250px;height:250px">
+                      <div style="position:absolute;left:0;top:0;width:40px;height:40px;border-left:2px solid var(--color-bg);border-top:2px solid var(--color-bg)"></div>
+                      <div style="position:absolute;right:0;top:0;width:40px;height:40px;border-right:2px solid var(--color-bg);border-top:2px solid var(--color-bg)"></div>
+                      <div style="position:absolute;left:0;bottom:0;width:40px;height:40px;border-left:2px solid var(--color-bg);border-bottom:2px solid var(--color-bg)"></div>
+                      <div style="position:absolute;right:0;bottom:0;width:40px;height:40px;border-right:2px solid var(--color-bg);border-bottom:2px solid var(--color-bg)"></div>
+                      <div style="position:absolute;inset:36px;background:var(--color-bg);padding:12px;opacity:.14">
+                        <div style="display:grid;grid-template-columns:repeat(25,1fr);width:100%;height:100%">
+                          <sc-for list="{{ qrCells }}" as="c" hint-placeholder-count="0"><div style="background:{{ c.bg }}"></div></sc-for>
+                        </div>
+                      </div>
+                      {{ scanLine }}
+                    </div>
+                  </div>
+                  <div style="padding:0 28px 46px;display:flex;flex-direction:column;align-items:center;gap:12px">
+                    <span style="font:400 13px/1.4 var(--font-body);color:var(--color-accent-300);text-align:center">QR for: {{ live.name }}</span>
+                    <button onClick="{{ onScan }}" class="btn" style="width:100%;min-height:54px;background:var(--color-bg);color:var(--color-accent-900);border-color:var(--color-bg);font-size:18px" style-hover="background:var(--color-accent-100)">{{ scanLabel }}</button>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ notScan }}" hint-placeholder-val="{{ false }}">
+                <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 32px 0;font:600 15px var(--font-body)"><span>9:41</span><div style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:3px;padding:1.5px"><div style="width:80%;height:100%;background:currentColor"></div></div></div>
+                <div style="display:flex;align-items:center;gap:10px;padding:6px 22px 14px;border-bottom:1px solid var(--color-divider)">
+                  <img src="assets/jpps-logo.png" alt="Jabatan Perkhidmatan Pembetungan Sarawak logo" style="width:44px;height:44px;flex:none;object-fit:contain">
+                  <span style="font:500 12px/1.25 var(--font-body);color:var(--color-neutral-800)">Jabatan Perkhidmatan<br>Pembetungan Sarawak</span>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isLanding }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;padding:22px 24px 44px;gap:22px;overflow-y:auto">
+                  <div style="display:flex;flex-direction:column;gap:8px">
+                    <span class="card-kicker" style="color:var(--color-accent-700)">Meeting attendance</span>
+                    <span style="font:600 34px/1.08 var(--font-heading);letter-spacing:-.015em;text-wrap:pretty">{{ live.name }}</span>
+                  </div>
+                  <div class="blueprint" style="padding:16px 18px;display:grid;grid-template-columns:70px 1fr;row-gap:12px;font:400 15px/1.35 var(--font-body)">
+                    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                    <span style="color:var(--color-neutral-700)">Date</span><span>{{ liveDate }}</span>
+                    <span style="color:var(--color-neutral-700)">Time</span><span>{{ live.time }}</span>
+                    <span style="color:var(--color-neutral-700)">Venue</span><span>{{ live.venue }}</span>
+                  </div>
+                  <span style="font:400 14px var(--font-body);color:var(--color-neutral-700)">{{ liveCount }} people have checked in</span>
+                  <div style="flex:1"></div>
+                  <div style="display:flex;flex-direction:column;gap:8px;align-items:center">
+                    <button onClick="{{ goForm }}" class="btn btn-primary blueprint" style="width:100%;min-height:64px;font-size:24px;letter-spacing:.02em"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Kehadiran</button>
+                    <span style="font:400 13px var(--font-body);color:var(--color-neutral-700)">Tap to record your attendance</span>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isForm }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+                  <div style="flex:1;overflow-y:auto;padding:12px 24px 20px;display:flex;flex-direction:column;gap:18px">
+                    <button onClick="{{ goLanding }}" class="btn btn-ghost" style="align-self:flex-start;font-size:15px;margin-left:-4px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>Back</button>
+                    <div style="display:flex;flex-direction:column;gap:4px">
+                      <span style="font:600 30px/1.1 var(--font-heading)">Your details</span>
+                      <span style="font:400 14px/1.4 var(--font-body);color:var(--color-neutral-700)">{{ live.name }}</span>
+                    </div>
+                    <div class="field">
+                      <label>Full name</label>
+                      <input class="input" value="{{ form.name }}" onChange="{{ onName }}" placeholder="e.g. Nurul Ain binti Jamil" style="min-height:48px;font-size:16px;border-color:{{ nameBorder }}">
+                      <sc-if value="{{ errName }}" hint-placeholder-val="{{ false }}"><div style="font:500 13px var(--font-body);color:oklch(0.5 0.15 30);margin-top:5px">{{ errName }}</div></sc-if>
+                    </div>
+                    <div class="field">
+                      <label>Grade</label>
+                      <input class="input" value="{{ form.grade }}" onChange="{{ onGrade }}" placeholder="e.g. J41" style="min-height:48px;font-size:16px;text-transform:uppercase;border-color:{{ gradeBorder }}">
+                      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+                        <sc-for list="{{ gradeChips }}" as="g" hint-placeholder-count="7">
+                          <button onClick="{{ g.onPick }}" class="btn" style="min-height:36px;min-width:52px;font-size:14px;background:{{ g.bg }};color:{{ g.fg }};border-color:{{ g.border }}">{{ g.label }}</button>
+                        </sc-for>
+                      </div>
+                      <sc-if value="{{ errGrade }}" hint-placeholder-val="{{ false }}"><div style="font:500 13px var(--font-body);color:oklch(0.5 0.15 30);margin-top:5px">{{ errGrade }}</div></sc-if>
+                    </div>
+                    <sc-if value="{{ showDept }}" hint-placeholder-val="{{ true }}">
+                      <div class="field">
+                        <label>Department / unit</label>
+                        <select class="input" value="{{ form.dept }}" onChange="{{ onDept }}" style="min-height:48px;font-size:16px;border-color:{{ deptBorder }}">
+                          <option value="">Select department</option>
+                          <sc-for list="{{ depts }}" as="d" hint-placeholder-count="0"><option value="{{ d }}">{{ d }}</option></sc-for>
+                        </select>
+                        <sc-if value="{{ errDept }}" hint-placeholder-val="{{ false }}"><div style="font:500 13px var(--font-body);color:oklch(0.5 0.15 30);margin-top:5px">{{ errDept }}</div></sc-if>
+                      </div>
+                    </sc-if>
+                    <div class="field">
+                      <label>Date</label>
+                      <sc-if value="{{ autoDate }}" hint-placeholder-val="{{ true }}">
+                        <div style="min-height:48px;padding:0 12px;display:flex;align-items:center;justify-content:space-between;border:1px dashed var(--color-divider);font:400 16px var(--font-body)"><span>{{ todayLong }}</span><span class="tag tag-accent">Auto</span></div>
+                      </sc-if>
+                      <sc-if value="{{ editDate }}" hint-placeholder-val="{{ false }}">
+                        <input type="date" class="input" value="{{ form.date }}" onChange="{{ onDate }}" style="min-height:48px;font-size:16px">
+                      </sc-if>
+                    </div>
+                  </div>
+                  <div style="padding:14px 24px 42px;border-top:1px solid var(--color-divider)">
+                    <button onClick="{{ submit }}" class="btn btn-primary blueprint" style="width:100%;min-height:56px;font-size:19px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Submit attendance</button>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;padding:36px 24px 44px;gap:26px">
+                  <div style="display:flex;flex-direction:column;align-items:center;gap:14px;padding-top:24px;text-align:center">
+                    {{ checkMark }}
+                    <span style="font:600 32px/1.1 var(--font-heading)">Attendance recorded</span>
+                    <span style="font:400 15px/1.45 var(--font-body);color:var(--color-neutral-700);max-width:280px">Thank you. You may close this page.</span>
+                  </div>
+                  <div class="blueprint" style="padding:16px 18px;display:grid;grid-template-columns:96px 1fr;row-gap:11px;font:400 15px/1.35 var(--font-body)">
+                    <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                    <span style="color:var(--color-neutral-700)">Name</span><span style="font-weight:500">{{ last.name }}</span>
+                    <span style="color:var(--color-neutral-700)">Grade</span><span>{{ last.grade }}</span>
+                    <span style="color:var(--color-neutral-700)">Department</span><span>{{ last.dept }}</span>
+                    <span style="color:var(--color-neutral-700)">Date</span><span>{{ lastDate }}</span>
+                    <span style="color:var(--color-neutral-700)">Time</span><span style="font-variant-numeric:tabular-nums">{{ last.time }}</span>
+                    <span style="color:var(--color-neutral-700)">Reference</span><span style="font-variant-numeric:tabular-nums">{{ last.ref }}</span>
+                  </div>
+                  <div style="flex:1"></div>
+                  <button onClick="{{ finish }}" class="btn btn-secondary" style="min-height:54px;font-size:18px">Done</button>
+                </div>
+              </sc-if>
+
+              <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:{{ homeBar }}"></div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 12px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">Secretariat</span>
+          <div style="width:390px;height:844px;border-radius:54px;background:#1d1f20;padding:11px;box-shadow:var(--shadow-lg)">
+            <div style="position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+              <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 32px 0;font:600 15px var(--font-body)"><span>9:41</span><div style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:3px;padding:1.5px"><div style="width:80%;height:100%;background:currentColor"></div></div></div>
+
+              <sc-if value="{{ isList }}" hint-placeholder-val="{{ true }}">
+                <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+                  <div style="flex:1;overflow-y:auto;padding:10px 22px 24px;display:flex;flex-direction:column;gap:20px">
+                    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px">
+                      <div style="display:flex;flex-direction:column;gap:2px">
+                        <span class="card-kicker" style="color:var(--color-accent-700)">Secretariat</span>
+                        <span style="font:600 34px/1.05 var(--font-heading)">Meetings</span>
+                      </div>
+                      <button onClick="{{ newMeeting }}" class="btn btn-secondary" style="min-height:40px;font-size:15px"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg>New</button>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--color-divider)">
+                      <div style="padding:12px 14px;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;gap:2px"><span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">Meetings</span><span style="font:600 30px/1 var(--font-heading)">{{ meetingCount }}</span></div>
+                      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:2px"><span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">Total check-ins</span><span style="font:600 30px/1 var(--font-heading)">{{ totalCheckins }}</span></div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:16px">
+                      <sc-for list="{{ meetingRows }}" as="m" hint-placeholder-count="3">
+                        <button onClick="{{ m.onOpen }}" class="blueprint" style="text-align:left;background:transparent;padding:14px 16px;display:flex;flex-direction:column;gap:8px;cursor:pointer;color:var(--color-text);width:100%" style-hover="background:color-mix(in srgb,var(--color-text) 4%,transparent)">
+                          <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                          <div style="display:flex;justify-content:space-between;gap:10px;align-items:center">
+                            <span style="font:500 12px var(--font-body);color:var(--color-neutral-700)">{{ m.dateLabel }} · {{ m.time }}</span>
+                            <sc-if value="{{ m.isLive }}" hint-placeholder-val="{{ false }}"><span class="tag tag-accent">QR active</span></sc-if>
+                          </div>
+                          <span style="font:600 20px/1.15 var(--font-heading)">{{ m.name }}</span>
+                          <span style="font:400 13px var(--font-body);color:var(--color-neutral-700)">{{ m.count }} present · {{ m.venue }}</span>
+                        </button>
+                      </sc-for>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isDetail }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+                  <div style="flex:1;overflow-y:auto;padding:6px 22px 24px;display:flex;flex-direction:column;gap:20px">
+                    <button onClick="{{ goList }}" class="btn btn-ghost" style="align-self:flex-start;font-size:15px;margin-left:-4px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>Meetings</button>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--color-divider)">
+                      <div style="padding:12px 14px;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;gap:2px"><span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">Present</span><span style="font:600 38px/1 var(--font-heading)">{{ selCount }}</span></div>
+                      <div style="padding:12px 14px;display:flex;flex-direction:column;gap:2px"><span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">Last check-in</span><span style="font:600 38px/1 var(--font-heading);font-variant-numeric:tabular-nums">{{ selLastTime }}</span></div>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:12px">
+                      <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 18px var(--font-heading)">Meeting details</span><span class="tag tag-outline">Editable</span></div>
+                      <div class="field"><label>Meeting name</label><textarea class="input" rows="2" value="{{ sel.name }}" onChange="{{ setName }}" style="min-height:64px;font-size:15px;resize:none"></textarea></div>
+                      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+                        <div class="field" style="min-width:0"><label>Date</label><input type="date" class="input" value="{{ sel.date }}" onChange="{{ setDate }}" style="min-height:44px"></div>
+                        <div class="field" style="min-width:0"><label>Time</label><input class="input" value="{{ sel.time }}" onChange="{{ setTime }}" style="min-height:44px"></div>
+                      </div>
+                      <div class="field"><label>Venue</label><input class="input" value="{{ sel.venue }}" onChange="{{ setVenue }}" style="min-height:44px"></div>
+                    </div>
+                    <div class="blueprint" style="padding:16px;display:flex;gap:16px;align-items:center">
+                      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                      <div style="width:120px;height:120px;flex:none;padding:6px;background:var(--color-neutral-100)">
+                        <div style="display:grid;grid-template-columns:repeat(25,1fr);width:100%;height:100%">
+                          <sc-for list="{{ qrCells }}" as="c" hint-placeholder-count="0"><div style="background:{{ c.bg }}"></div></sc-for>
+                        </div>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:6px;min-width:0;align-items:flex-start">
+                        <span style="font:600 18px/1.15 var(--font-heading)">Attendance QR</span>
+                        <span style="font:400 13px/1.4 var(--font-body);color:var(--color-neutral-700)">Show on screen or print at the door.</span>
+                        <button onClick="{{ setLive }}" class="btn btn-secondary" style="font-size:13px">{{ liveBtnLabel }}</button>
+                      </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column">
+                      <span style="font:600 18px var(--font-heading);margin-bottom:6px">Checked in</span>
+                      <sc-if value="{{ selEmpty }}" hint-placeholder-val="{{ false }}"><span style="font:400 14px var(--font-body);color:var(--color-neutral-700);padding:14px 0">No check-ins yet. Scan the QR on the participant phone.</span></sc-if>
+                      <sc-for list="{{ recent }}" as="r" hint-placeholder-count="4">
+                        <div style="display:flex;align-items:center;gap:12px;padding:10px 6px;border-bottom:1px solid var(--color-divider);background:{{ r.bg }}">
+                          <div style="width:34px;height:34px;flex:none;border:1px solid var(--color-divider);display:flex;align-items:center;justify-content:center;font:600 13px var(--font-heading)">{{ r.initials }}</div>
+                          <div style="flex:1;min-width:0;display:flex;flex-direction:column">
+                            <span style="font:500 14px var(--font-body);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                            <span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">{{ r.grade }} · {{ r.dept }}</span>
+                          </div>
+                          <span style="font:400 13px var(--font-body);color:var(--color-neutral-700);font-variant-numeric:tabular-nums">{{ r.time }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="padding:14px 22px 42px;border-top:1px solid var(--color-divider)">
+                    <button onClick="{{ openReport }}" class="btn btn-primary blueprint" style="width:100%;min-height:56px;font-size:19px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Generate report</button>
+                  </div>
+                </div>
+              </sc-if>
+
+              <sc-if value="{{ isReport }}" hint-placeholder-val="{{ false }}">
+                <div style="flex:1;display:flex;flex-direction:column;min-height:0">
+                  <div style="flex:1;overflow-y:auto;padding:6px 22px 24px;display:flex;flex-direction:column;gap:20px">
+                    <div style="display:flex;justify-content:space-between;align-items:center">
+                      <button onClick="{{ goDetail }}" class="btn btn-ghost" style="font-size:15px;margin-left:-4px"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m15 18-6-6 6-6"></path></svg>Meeting</button>
+                      <span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">Generated {{ generatedAt }}</span>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:6px">
+                      <span class="card-kicker" style="color:var(--color-accent-700)">Attendance report</span>
+                      <span style="font:600 26px/1.1 var(--font-heading);text-wrap:pretty">{{ sel.name }}</span>
+                      <span style="font:400 13px/1.45 var(--font-body);color:var(--color-neutral-800)">{{ selDate }} · {{ sel.time }}<br>{{ sel.venue }}</span>
+                    </div>
+                    <div class="blueprint" style="padding:16px;display:flex;flex-direction:column;gap:14px">
+                      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+                      <div style="display:flex;justify-content:space-between;align-items:flex-end"><span style="font:600 18px var(--font-heading)">Summary</span><span style="font:600 44px/0.9 var(--font-heading)">{{ selCount }}<span style="font:400 13px var(--font-body);color:var(--color-neutral-700);margin-left:6px">present</span></span></div>
+                      <div style="display:flex;flex-direction:column;gap:8px">
+                        <span style="font:500 11px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">By department</span>
+                        <sc-for list="{{ deptSummary }}" as="d" hint-placeholder-count="3">
+                          <div style="display:grid;grid-template-columns:1fr 24px;gap:10px;align-items:center">
+                            <div style="display:flex;flex-direction:column;gap:3px"><span style="font:400 13px var(--font-body)">{{ d.label }}</span><div style="height:6px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ d.pct }};background:var(--color-accent)"></div></div></div>
+                            <span style="font:600 16px var(--font-heading);text-align:right">{{ d.n }}</span>
+                          </div>
+                        </sc-for>
+                      </div>
+                      <div style="display:flex;flex-direction:column;gap:8px">
+                        <span style="font:500 11px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)">By grade</span>
+                        <div style="display:flex;flex-wrap:wrap;gap:6px">
+                          <sc-for list="{{ gradeSummary }}" as="s" hint-placeholder-count="3"><span class="tag tag-accent">{{ s.label }} × {{ s.n }}</span></sc-for>
+                        </div>
+                      </div>
+                    </div>
+                    <div style="display:flex;flex-direction:column">
+                      <div style="display:grid;grid-template-columns:24px 1fr 40px 40px;gap:8px;padding:6px 0;border-bottom:1px solid var(--color-divider);font:500 11px var(--font-body);letter-spacing:.08em;text-transform:uppercase;color:var(--color-neutral-700)"><span>No</span><span>Name</span><span>Grade</span><span style="text-align:right">Time</span></div>
+                      <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="5">
+                        <div style="display:grid;grid-template-columns:24px 1fr 40px 40px;gap:8px;padding:9px 0;border-bottom:1px solid color-mix(in srgb,var(--color-text) 8%,transparent);font:400 13px/1.3 var(--font-body);align-items:baseline">
+                          <span style="color:var(--color-neutral-700)">{{ r.no }}</span>
+                          <span style="display:flex;flex-direction:column"><span style="font-weight:500">{{ r.name }}</span><span style="font-size:12px;color:var(--color-neutral-700)">{{ r.dept }}</span></span>
+                          <span>{{ r.grade }}</span>
+                          <span style="text-align:right;font-variant-numeric:tabular-nums;color:var(--color-neutral-700)">{{ r.time }}</span>
+                        </div>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div style="padding:14px 22px 42px;border-top:1px solid var(--color-divider);display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                    <button onClick="{{ downloadCsv }}" class="btn btn-secondary" style="min-height:54px;font-size:16px"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></svg>Excel</button>
+                    <button onClick="{{ printReport }}" class="btn btn-primary blueprint" style="min-height:54px;font-size:16px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path><path d="M12 15V3"></path></svg>PDF</button>
+                  </div>
+                </div>
+              </sc-if>
+
+              <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--color-text)"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="dv-opt" id="1b">
+      <div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Alt. check-in · one screen, no landing step</div>
+      <div style="width:390px;height:844px;border-radius:54px;background:#1d1f20;padding:11px;box-shadow:var(--shadow-lg)">
+        <div style="position:relative;width:100%;height:100%;border-radius:44px;overflow:hidden;background:var(--color-bg);display:flex;flex-direction:column">
+          <div style="height:54px;flex:none;display:flex;align-items:center;justify-content:space-between;padding:6px 32px 0;font:600 15px var(--font-body)"><span>9:41</span><div style="width:25px;height:12px;border:1.5px solid currentColor;border-radius:3px;padding:1.5px"><div style="width:80%;height:100%;background:currentColor"></div></div></div>
+          <div style="background:var(--color-accent-900);color:var(--color-bg);padding:18px 24px 22px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;align-items:center;gap:10px">
+              <img src="assets/jpps-logo.png" alt="Jabatan Perkhidmatan Pembetungan Sarawak logo" style="width:40px;height:40px;flex:none;object-fit:contain">
+              <span style="font:500 11px/1.25 var(--font-body);color:var(--color-accent-200)">Jabatan Perkhidmatan Pembetungan Sarawak</span>
+            </div>
+            <span style="font:600 28px/1.08 var(--font-heading)">Monthly Operations Meeting No. 11/2026</span>
+            <span style="font:400 13px var(--font-body);color:var(--color-accent-200)">Tuesday, 3 November 2026 · 9:00 AM · Main Meeting Room, Level 3</span>
+          </div>
+          <div style="flex:1;padding:22px 24px;display:flex;flex-direction:column;gap:16px">
+            <div class="field"><label>Full name</label><input class="input" value="Jessica anak Nyandang" style="min-height:48px;font-size:16px"></div>
+            <div class="field"><label>Grade</label>
+              <div class="seg" style="display:grid;grid-template-columns:repeat(4,1fr);width:100%">
+                <span class="seg-opt" style="justify-content:center;min-height:44px">J41</span><span class="seg-opt" style="justify-content:center;background:var(--color-accent);color:var(--color-bg)">J44</span><span class="seg-opt" style="justify-content:center">J48</span><span class="seg-opt" style="justify-content:center">Other</span>
+              </div>
+            </div>
+            <div class="field"><label>Department / unit</label><div class="input" style="min-height:48px;font-size:16px;display:flex;align-items:center;justify-content:space-between">Engineering<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"></path></svg></div></div>
+            <span style="font:400 13px var(--font-body);color:var(--color-neutral-700)">Date recorded automatically: 3 November 2026</span>
+          </div>
+          <div style="padding:14px 24px 42px;border-top:1px solid var(--color-divider)">
+            <button class="btn btn-primary blueprint" style="width:100%;min-height:60px;font-size:22px"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Kehadiran</button>
+          </div>
+          <div style="position:absolute;bottom:9px;left:50%;transform:translateX(-50%);width:134px;height:5px;border-radius:3px;background:var(--color-text)"></div>
+        </div>
+      </div>
+      <span style="max-width:390px;font:400 13px/1.45 var(--font-body);color:var(--color-neutral-700)">Faster for regulars: the Kehadiran button submits directly. Trades the clear "tap Kehadiran first" moment for one fewer screen.</span>
+    </div>
+
+    <div class="dv-opt" id="1c">
+      <div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>PDF report output · live from the meeting open in <a class="dv-oid" href="#1a">1a</a></div>
+      <div style="width:595px;min-height:842px;background:var(--color-neutral-100);box-shadow:var(--shadow-md);padding:48px 52px;display:flex;flex-direction:column;gap:24px">
+        <div style="display:flex;align-items:center;gap:14px;padding-bottom:16px;border-bottom:1.5px solid var(--color-text)">
+          <img src="assets/jpps-logo.png" alt="Jabatan Perkhidmatan Pembetungan Sarawak logo" style="width:58px;height:58px;flex:none;object-fit:contain">
+          <div style="display:flex;flex-direction:column"><span style="font:600 18px/1.15 var(--font-heading)">Jabatan Perkhidmatan Pembetungan Sarawak</span><span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">Attendance report</span></div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <span style="font:600 26px/1.15 var(--font-heading)">{{ sel.name }}</span>
+          <div style="display:grid;grid-template-columns:70px 1fr;row-gap:4px;font:400 13px var(--font-body)">
+            <span style="color:var(--color-neutral-700)">Date</span><span>{{ selDate }}</span>
+            <span style="color:var(--color-neutral-700)">Time</span><span>{{ sel.time }}</span>
+            <span style="color:var(--color-neutral-700)">Venue</span><span>{{ sel.venue }}</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:140px 1fr;border:1px solid var(--color-divider)">
+          <div style="padding:14px 16px;border-right:1px solid var(--color-divider);display:flex;flex-direction:column;gap:2px"><span style="font:400 12px var(--font-body);color:var(--color-neutral-700)">Total present</span><span style="font:600 44px/1 var(--font-heading)">{{ selCount }}</span></div>
+          <div style="padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+            <sc-for list="{{ deptSummary }}" as="d" hint-placeholder-count="3">
+              <div style="display:grid;grid-template-columns:150px 1fr 20px;gap:10px;align-items:center;font:400 12px var(--font-body)"><span>{{ d.label }}</span><div style="height:5px;background:var(--color-neutral-200)"><div style="height:100%;width:{{ d.pct }};background:var(--color-accent)"></div></div><span style="text-align:right;font-weight:500">{{ d.n }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <table class="table" style="font-size:12px">
+          <thead><tr><th style="width:32px">No</th><th>Name</th><th>Grade</th><th>Department</th><th style="text-align:right">Time</th></tr></thead>
+          <tbody>
+            <sc-for list="{{ reportRows }}" as="r" hint-placeholder-count="5">
+              <tr><td>{{ r.no }}</td><td style="font-weight:500">{{ r.name }}</td><td>{{ r.grade }}</td><td>{{ r.dept }}</td><td style="text-align:right;font-variant-numeric:tabular-nums">{{ r.time }}</td></tr>
+            </sc-for>
+          </tbody>
+        </table>
+        <div style="flex:1"></div>
+        <div style="display:flex;justify-content:space-between;font:400 11px var(--font-body);color:var(--color-neutral-700);border-top:1px solid var(--color-divider);padding-top:10px"><span>Generated {{ generatedAt }}</span><span>Page 1 of 1</span></div>
+      </div>
+    </div>
+
+  </div>
+  <p class="dv-next">Try next: "use <a class="dv-oid" href="#1b">1b</a> as the check-in flow" · "add a signature column to <a class="dv-oid" href="#1c">1c</a>" · "add secretariat login"</p>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;requirePin&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;label&quot;:&quot;2a · Require PIN&quot;},&quot;dateMode&quot;:{&quot;editor&quot;:&quot;enum&quot;,&quot;options&quot;:[&quot;auto&quot;,&quot;editable&quot;],&quot;default&quot;:&quot;auto&quot;,&quot;tsType&quot;:&quot;'auto'|'editable'&quot;,&quot;label&quot;:&quot;1a · Check-in date&quot;},&quot;showDepartment&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;,&quot;label&quot;:&quot;Ask for department&quot;}}">
+const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DAYS = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const GRADES = ['J41','J44','J48','JA29','N19','N29','H11'];
+const DEPTS = ['Operations','Engineering','Planning','Administration','Finance','Regulatory & Enforcement'];
+const iso = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+const todayISO = () => iso(new Date());
+const daysAgo = n => { const d = new Date(); d.setDate(d.getDate() - n); return iso(d); };
+const fmtDate = (d, withDay) => {
+  if (!d) return '—';
+  const [y, m, dd] = d.split('-').map(Number);
+  const s = `${dd} ${MONTHS[m - 1]} ${y}`;
+  return withDay ? `${DAYS[new Date(y, m - 1, dd).getDay()]}, ${s}` : s;
+};
+const nowTime = () => { const n = new Date(); return `${String(n.getHours()).padStart(2,'0')}:${String(n.getMinutes()).padStart(2,'0')}`; };
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const POOL = [
+  ['Abang Mohd Hafiz bin Abang Ali','J48','Engineering'],['Nurul Ain binti Jamil','J41','Planning'],['Lau Siew Ming','J44','Engineering'],
+  ['Jessica anak Nyandang','N29','Administration'],['Mohd Azrul bin Sahari','JA29','Operations'],['Wong Kah Hui','J41','Operations'],
+  ['Dayang Norliza binti Awang','N19','Finance'],['Ricky anak Jugah','H11','Operations'],['Siti Khadijah binti Bujang','J44','Regulatory & Enforcement'],
+  ['Tan Boon Keat','J48','Planning'],
+];
+const seed = (idx, date, start) => idx.map((p, i) => ({ name: POOL[p][0], grade: POOL[p][1], dept: POOL[p][2], date, time: `${String(Math.floor((start + i * 3) / 60)).padStart(2,'0')}:${String((start + i * 3) % 60).padStart(2,'0')}` }));
+
+function makeQR() {
+  const N = 25; let s = 11;
+  const rnd = () => (s = (s * 9301 + 49297) % 233280) / 233280;
+  const finder = (r, c, R, C) => {
+    const y = r - R, x = c - C;
+    if (y < -1 || x < -1 || y > 7 || x > 7) return null;
+    if (y === -1 || x === -1 || y === 7 || x === 7) return false;
+    if (y === 0 || x === 0 || y === 6 || x === 6) return true;
+    return y >= 2 && y <= 4 && x >= 2 && x <= 4;
+  };
+  const out = [];
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    let on = finder(r, c, 0, 0);
+    if (on === null) on = finder(r, c, 0, 18);
+    if (on === null) on = finder(r, c, 18, 0);
+    if (on === null) on = (r === 6 || c === 6) ? (r + c) % 2 === 0 : rnd() > 0.52;
+    out.push({ bg: on ? 'var(--color-text)' : 'transparent' });
+  }
+  return out;
+}
+const QR = makeQR();
+
+class Component extends DCLogic {
+  state = {
+    pScreen: 'scan', aScreen: 'list', scanning: false,
+    liveId: 'm1', selId: 'm1',
+    meetings: [
+      { id: 'm1', name: 'Monthly Operations Meeting No. 11/2026', date: todayISO(), time: '9:00 AM', venue: 'Main Meeting Room, Level 3', attendees: seed([0,1,2,4,6], todayISO(), 521) },
+      { id: 'm2', name: 'Sewage Treatment Plant Safety Briefing', date: daysAgo(7), time: '2:30 PM', venue: 'Kuching Central STP', attendees: seed([4,5,7,0,8,2,9,3], daysAgo(7), 860) },
+      { id: 'm3', name: 'Planning Committee Meeting No. 10/2026', date: daysAgo(21), time: '10:00 AM', venue: 'Conference Room B', attendees: seed([1,9,0,6,3,8], daysAgo(21), 585) },
+    ],
+    form: { name: '', grade: '', dept: '', date: todayISO() },
+    errors: {}, last: null, flash: null,
+    prog2: { name: 'High Performance Team (HPT) SSDS 2026', venue: 'Damai Beach Resort, Kuching', dates: '20–22 November 2026', pin: '2611' },
+    s2: null, pin: ['', '', '', ''], pinOk: false, pinErr: '', f2: { name: '', grade: '', gradeOther: '', dept: '', reason: '' }, err2: {},
+    recs: [
+      { name: 'Nurul Ain binti Jamil', grade: 'J41', dept: 'Planning', status: 'present', reason: '', date: todayISO(), time: '08:42' },
+      { name: 'Lau Siew Ming', grade: 'J44', dept: 'Engineering', status: 'present', reason: '', date: todayISO(), time: '08:47' },
+      { name: 'Ricky anak Jugah', grade: 'H11', dept: 'Operations', status: 'absent', reason: 'On site, Satok pump station', date: todayISO(), time: '08:51' },
+    ],
+    admin: false, closed: false, toast: '', flash2: null,
+  };
+  pinRefs = [0, 1, 2, 3].map(() => React.createRef());
+  showToast = msg => { this.setState({ toast: msg }); clearTimeout(this._t2); this._t2 = setTimeout(() => this.setState({ toast: '' }), 2600); };
+  onPinChange = i => e => {
+    const v = e.target.value.replace(/\D/g, '').slice(-1);
+    const pin = [...this.state.pin]; pin[i] = v;
+    if (v && i < 3) this.pinRefs[i + 1].current?.focus();
+    const code = pin.join('');
+    if (code.length === 4) {
+      if (code === this.state.prog2.pin) { this.setState({ pin, pinOk: true, pinErr: '' }); this.showToast('PIN verified. Please submit your attendance.'); }
+      else { this.setState({ pin: ['', '', '', ''], pinErr: 'Incorrect PIN. Please ask the secretariat.' }); setTimeout(() => this.pinRefs[0].current?.focus(), 0); }
+    } else this.setState({ pin, pinErr: '' });
+  };
+  onPinKey = i => e => { if (e.key === 'Backspace' && !this.state.pin[i] && i > 0) this.pinRefs[i - 1].current?.focus(); };
+  set2 = p => this.setState(s => ({ f2: { ...s.f2, ...p }, err2: {} }));
+  submit2 = () => {
+    const { s2, f2, recs } = this.state;
+    const showDept = this.props.showDepartment ?? true;
+    const name = f2.name.trim().replace(/\s+/g, ' ');
+    const grade = (f2.grade === 'Other' ? f2.gradeOther : f2.grade).trim().toUpperCase();
+    const err = {};
+    if (!s2) err.status = 'Please choose Present or Absent.';
+    if (name.length < 3) err.name = 'Please enter your full name.';
+    else if (recs.some(r => r.name.toLowerCase() === name.toLowerCase() && r.date === todayISO())) err.name = 'This name is already recorded today.';
+    if (!grade) err.grade = 'Please choose your grade.';
+    if (showDept && !f2.dept) err.dept = 'Please select your department.';
+    if (Object.keys(err).length) return this.setState({ err2: err });
+    const rec = { name, grade, dept: showDept ? f2.dept : '', status: s2, reason: f2.reason.trim(), date: todayISO(), time: nowTime() };
+    this.setState({ recs: [...recs, rec], s2: null, pin: ['', '', '', ''], pinOk: !(this.props.requirePin ?? true), f2: { name: '', grade: '', gradeOther: '', dept: '', reason: '' }, err2: {}, flash2: name });
+    this.showToast('Attendance submitted successfully!');
+    clearTimeout(this._f2); this._f2 = setTimeout(() => this.setState({ flash2: null }), 2600);
+  };
+  copyExcel = () => {
+    const { recs, prog2 } = this.state;
+    const rows = [[prog2.name], ['No', 'Name', 'Grade', 'Department', 'Status', 'Reason', 'Date', 'Time']];
+    recs.forEach((r, i) => rows.push([i + 1, r.name, r.grade, r.dept, r.status === 'present' ? 'Present' : 'Absent', r.reason, fmtDate(r.date), r.time]));
+    const tsv = rows.map(r => r.join('\t')).join('\n');
+    const done = () => this.showToast('Copied. Paste into Excel.');
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(tsv).then(done, () => { this.fallbackCopy(tsv); done(); });
+    else { this.fallbackCopy(tsv); done(); }
+  };
+  fallbackCopy = t => { const ta = document.createElement('textarea'); ta.value = t; ta.style.position = 'fixed'; ta.style.opacity = '0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch (e) {} ta.remove(); };
+  printReport2 = () => {
+    const { recs, prog2 } = this.state;
+    const p = recs.filter(r => r.status === 'present').length;
+    const rows = recs.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.grade)}</td><td>${esc(r.dept)}</td><td>${r.status === 'present' ? 'Present' : 'Absent'}</td><td>${esc(r.reason)}</td><td>${r.time}</td></tr>`).join('');
+    const html = `<!doctype html><html><head><title>Attendance report</title><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Barlow+Condensed:wght@600&display=swap" rel="stylesheet"><style>body{font:11pt/1.45 Barlow,sans-serif;margin:20mm 18mm;color:#1d1f20}h1{font:600 20pt/1.15 'Barlow Condensed';margin:14pt 0 6pt}.org{font:600 14pt 'Barlow Condensed';border-bottom:1.5px solid #1d1f20;padding-bottom:8pt}p{margin:0 0 2pt}table{width:100%;border-collapse:collapse;margin-top:14pt}th{text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#5d5d60;border-bottom:1px solid #999;padding:5pt}td{padding:6pt 5pt;border-bottom:1px solid #ddd}</style></head><body><div class="org">Jabatan Perkhidmatan Pembetungan Sarawak · Attendance report</div><h1>${esc(prog2.name)}</h1><p>Program dates: ${esc(prog2.dates)}</p><p>Venue: ${esc(prog2.venue)}</p><p><b>Present: ${p} · Absent: ${recs.length - p}</b></p><table><tr><th>No</th><th>Name</th><th>Grade</th><th>Department</th><th>Status</th><th>Reason</th><th>Time</th></tr>${rows}</table></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) return alert('Please allow pop-ups to save the PDF.');
+    w.document.write(html); w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 600);
+  };
+  vals2() {
+    const { prog2, s2, pin, pinOk, pinErr, f2, err2, recs, admin, closed, toast, flash2 } = this.state;
+    const needPin = this.props.requirePin ?? true;
+    const errC = 'oklch(0.5 0.15 30)';
+    const G = ['J41', 'J44', 'J48', 'JA29', 'N19', 'N29', 'H11', 'Other'];
+    const presentN = recs.filter(r => r.status === 'present').length;
+    return {
+      prog2, pinHint: prog2.pin, today2: fmtDate(todayISO(), true), admin, closed, formOpen: !closed,
+      toastOn: !!toast, toast, needPin, pinOk: pinOk || !needPin, isAbsent: s2 === 'absent', f2, err2,
+      adminLabel: admin ? 'Exit admin' : 'Admin', adminBtnBg: admin ? 'var(--color-accent)' : 'transparent', adminBtnBorder: admin ? 'var(--color-accent)' : 'color-mix(in srgb,var(--color-bg) 35%,transparent)',
+      closeLabel: closed ? 'Reopen form' : 'Close form',
+      statusTiles: [['present', 'Present', '✓'], ['absent', 'Absent', '✕']].map(([k, label, glyph]) => {
+        const on = s2 === k;
+        const g = k === 'present';
+        return { label, glyph, bg: on ? (g ? 'var(--color-accent-2-100)' : 'var(--color-neutral-200)') : 'transparent', fg: on ? (g ? 'var(--color-accent-2-700)' : 'var(--color-neutral-900)') : 'var(--color-neutral-700)', border: on ? (g ? '2px solid var(--color-accent-2)' : '2px solid var(--color-neutral-700)') : '1px solid var(--color-divider)', onPick: () => this.setState({ s2: k, err2: {} }) };
+      }),
+      pinBoxes: pin.map((v, i) => ({ v, ref: this.pinRefs[i], onChange: this.onPinChange(i), onKey: this.onPinKey(i), border: pinErr ? errC : pinOk ? 'var(--color-accent)' : 'var(--color-divider)' })),
+      pinMsg: pinErr || (pinOk ? 'PIN verified' : 'Your PIN is given by the secretariat'), pinMsgColor: pinErr ? errC : pinOk ? 'var(--color-accent-700)' : 'var(--color-neutral-700)',
+      gradeChips2: G.map(g => { const on = f2.grade === g; return { label: g, bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)', border: on ? 'var(--color-accent)' : 'var(--color-divider)', onPick: () => this.set2({ grade: g }) }; }),
+      gradeOther: f2.grade === 'Other',
+      b2Name: err2.name ? errC : 'var(--color-divider)', b2Dept: err2.dept ? errC : 'var(--color-divider)',
+      presentN, absentN: recs.length - presentN, recsEmpty: recs.length === 0,
+      recRows: recs.map((r, i) => ({ ...r, statusLabel: r.status === 'present' ? 'Present' : 'Absent', tagClass: r.status === 'present' ? 'tag tag-accent-2' : 'tag tag-neutral', meta: [r.grade, r.dept, r.reason].filter(Boolean).join(' · '), dateShort: r.date.split('-').reverse().join('/'), bg: r.name === flash2 ? 'var(--color-accent-2-100)' : 'transparent', onDelete: () => this.setState(s => ({ recs: s.recs.filter((_, j) => j !== i) })) })).reverse(),
+      toggleAdmin: () => this.setState(s => ({ admin: !s.admin })),
+      toggleClosed: () => { const c = !this.state.closed; this.setState({ closed: c }); this.showToast(c ? 'Form closed. No new submissions.' : 'Form reopened.'); },
+      setProg2Name: e => this.setState(s => ({ prog2: { ...s.prog2, name: e.target.value } })),
+      setProg2Dates: e => this.setState(s => ({ prog2: { ...s.prog2, dates: e.target.value } })),
+      setProg2Venue: e => this.setState(s => ({ prog2: { ...s.prog2, venue: e.target.value } })),
+      setProg2Pin: e => this.setState(s => ({ prog2: { ...s.prog2, pin: e.target.value.replace(/\D/g, '').slice(0, 4) } })),
+      on2Name: e => this.set2({ name: e.target.value }), on2GradeOther: e => this.set2({ gradeOther: e.target.value }),
+      on2Dept: e => this.set2({ dept: e.target.value }), on2Reason: e => this.set2({ reason: e.target.value }),
+      submit2: this.submit2, copyExcel: this.copyExcel, printReport2: this.printReport2,
+    };
+  }
+
+  scanLineEl = React.createElement('div', { style: { position: 'absolute', left: 24, right: 24, height: 2, background: 'var(--color-accent-300)', boxShadow: '0 0 14px 2px var(--color-accent-400)', animation: 'scanline 1.8s ease-in-out infinite alternate' } });
+  checkEl = React.createElement('div', { className: 'blueprint', style: { width: 84, height: 84, background: 'var(--color-accent-2)', color: 'var(--color-bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', animation: 'pop .35s cubic-bezier(.3,1.5,.6,1)' } },
+    ['tl','tr','bl','br'].map(k => React.createElement('i', { key: k, className: 'corner ' + k })),
+    React.createElement('svg', { width: 40, height: 40, viewBox: '0 0 24 24', fill: 'none', stroke: 'currentColor', strokeWidth: 1.5, strokeLinecap: 'round', strokeLinejoin: 'round' }, React.createElement('path', { d: 'M20 6 9 17l-5-5' })));
+
+  get live() { return this.state.meetings.find(m => m.id === this.state.liveId) || this.state.meetings[0]; }
+  get sel() { return this.state.meetings.find(m => m.id === this.state.selId) || this.state.meetings[0]; }
+  setForm = p => this.setState(s => ({ form: { ...s.form, ...p }, errors: {} }));
+  setSel = p => this.setState(s => ({ meetings: s.meetings.map(m => m.id === s.selId ? { ...m, ...p } : m) }));
+
+  submit = () => {
+    const { form } = this.state;
+    const live = this.live;
+    const auto = (this.props.dateMode ?? 'auto') === 'auto';
+    const showDept = this.props.showDepartment ?? true;
+    const name = form.name.trim().replace(/\s+/g, ' ');
+    const grade = form.grade.trim().toUpperCase();
+    const date = auto ? todayISO() : form.date;
+    const errors = {};
+    if (name.length < 3) errors.name = 'Please enter your full name.';
+    else if (live.attendees.some(a => a.name.toLowerCase() === name.toLowerCase())) errors.name = 'This name has already checked in.';
+    if (!grade) errors.grade = 'Please enter or pick your grade.';
+    if (showDept && !form.dept) errors.dept = 'Please select your department.';
+    if (Object.keys(errors).length) return this.setState({ errors });
+    const rec = { name, grade, dept: showDept ? form.dept : '—', date, time: nowTime() };
+    const ref = 'JPPS-' + live.id.toUpperCase() + '-' + String(live.attendees.length + 1).padStart(3, '0');
+    this.setState(s => ({
+      meetings: s.meetings.map(m => m.id === live.id ? { ...m, attendees: [...m.attendees, rec] } : m),
+      last: { ...rec, ref }, pScreen: 'done', errors: {}, flash: name,
+    }));
+    clearTimeout(this._fl); this._fl = setTimeout(() => this.setState({ flash: null }), 2500);
+  };
+
+  downloadCsv = () => {
+    const m = this.sel;
+    const q = v => `"${String(v).replace(/"/g, '""')}"`;
+    const lines = [['Jabatan Perkhidmatan Pembetungan Sarawak'], ['Meeting', m.name], ['Date', fmtDate(m.date)], ['Time', m.time], ['Venue', m.venue], ['Total present', m.attendees.length], [], ['No', 'Name', 'Grade', 'Department', 'Date', 'Time']].map(r => r.map(q).join(','));
+    m.attendees.forEach((a, i) => lines.push([i + 1, a.name, a.grade, a.dept, fmtDate(a.date), a.time].map(q).join(',')));
+    const blob = new Blob(['\uFEFF' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob); a.download = 'attendance-report.csv';
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+  printReport = () => {
+    const m = this.sel;
+    const rows = m.attendees.map((a, i) => `<tr><td>${i + 1}</td><td>${esc(a.name)}</td><td>${esc(a.grade)}</td><td>${esc(a.dept)}</td><td>${a.time}</td></tr>`).join('');
+    const html = `<!doctype html><html><head><title>Attendance report</title><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Barlow+Condensed:wght@600&display=swap" rel="stylesheet"><style>body{font:11pt/1.45 Barlow,sans-serif;margin:20mm 18mm;color:#1d1f20}h1{font:600 20pt/1.15 'Barlow Condensed';margin:14pt 0 6pt}.org{font:600 14pt 'Barlow Condensed';border-bottom:1.5px solid #1d1f20;padding-bottom:8pt}p{margin:0 0 2pt}table{width:100%;border-collapse:collapse;margin-top:14pt}th{text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#5d5d60;border-bottom:1px solid #999;padding:5pt}td{padding:6pt 5pt;border-bottom:1px solid #ddd}</style></head><body><div class="org">Jabatan Perkhidmatan Pembetungan Sarawak · Attendance report</div><h1>${esc(m.name)}</h1><p>Date: ${fmtDate(m.date, true)}</p><p>Time: ${esc(m.time)}</p><p>Venue: ${esc(m.venue)}</p><p><b>Total present: ${m.attendees.length}</b></p><table><tr><th>No</th><th>Name</th><th>Grade</th><th>Department</th><th>Time</th></tr>${rows}</table></body></html>`;
+    const w = window.open('', '_blank');
+    if (!w) return alert('Please allow pop-ups to save the PDF.');
+    w.document.write(html); w.document.close();
+    setTimeout(() => { w.focus(); w.print(); }, 600);
+  };
+
+  renderVals() {
+    const { pScreen, aScreen, scanning, meetings, form, errors, last, flash, liveId, selId } = this.state;
+    const live = this.live, sel = this.sel;
+    const autoDate = (this.props.dateMode ?? 'auto') === 'auto';
+    const showDept = this.props.showDepartment ?? true;
+    const errC = 'oklch(0.5 0.15 30)';
+    const initials = n => n.split(' ').filter(w => !/^(bin|binti|anak|a\/l|a\/p|abang|dayang)$/i.test(w)).slice(0, 2).map(w => w[0]).join('').toUpperCase();
+    const count = (arr, k) => { const o = {}; arr.forEach(a => { o[a[k]] = (o[a[k]] || 0) + 1; }); return o; };
+    const dc = count(sel.attendees, 'dept'), gc = count(sel.attendees, 'grade');
+    const maxD = Math.max(1, ...Object.values(dc));
+    const n = new Date();
+    return {
+      ...this.vals2(),
+      isScan: pScreen === 'scan', notScan: pScreen !== 'scan', isLanding: pScreen === 'landing', isForm: pScreen === 'form', isDone: pScreen === 'done',
+      isList: aScreen === 'list', isDetail: aScreen === 'detail', isReport: aScreen === 'report',
+      homeBar: pScreen === 'scan' ? 'var(--color-bg)' : 'var(--color-text)',
+      scanLabel: scanning ? 'Scanning…' : 'Tap to scan', scanLine: this.scanLineEl, checkMark: this.checkEl, qrCells: QR,
+      live, liveDate: fmtDate(live.date, true), liveCount: live.attendees.length,
+      sel, selDate: fmtDate(sel.date, true), selCount: sel.attendees.length, selEmpty: sel.attendees.length === 0,
+      selLastTime: sel.attendees.length ? sel.attendees[sel.attendees.length - 1].time : '—',
+      liveBtnLabel: sel.id === liveId ? 'QR active ✓' : 'Make QR active',
+      meetingCount: meetings.length, totalCheckins: meetings.reduce((t, m) => t + m.attendees.length, 0),
+      meetingRows: [...meetings].sort((a, b) => b.date.localeCompare(a.date)).map(m => ({ ...m, count: m.attendees.length, dateLabel: fmtDate(m.date), isLive: m.id === liveId, venue: m.venue || 'No venue set', onOpen: () => this.setState({ selId: m.id, aScreen: 'detail' }) })),
+      recent: sel.attendees.map(a => ({ ...a, initials: initials(a.name), bg: a.name === flash && sel.id === liveId ? 'var(--color-accent-100)' : 'transparent' })).reverse(),
+      reportRows: sel.attendees.map((a, i) => ({ ...a, no: i + 1 })),
+      deptSummary: Object.keys(dc).sort((a, b) => dc[b] - dc[a]).map(k => ({ label: k, n: dc[k], pct: Math.round(dc[k] / maxD * 100) + '%' })),
+      gradeSummary: Object.keys(gc).sort().map(k => ({ label: k, n: gc[k] })),
+      generatedAt: `${fmtDate(iso(n))}, ${nowTime()}`,
+      form, todayLong: fmtDate(todayISO(), true), autoDate, editDate: !autoDate, showDept, depts: DEPTS,
+      errName: errors.name || '', errGrade: errors.grade || '', errDept: errors.dept || '',
+      nameBorder: errors.name ? errC : 'var(--color-divider)', gradeBorder: errors.grade ? errC : 'var(--color-divider)', deptBorder: errors.dept ? errC : 'var(--color-divider)',
+      gradeChips: GRADES.map(g => {
+        const on = form.grade.toUpperCase() === g;
+        return { label: g, bg: on ? 'var(--color-accent)' : 'transparent', fg: on ? 'var(--color-bg)' : 'var(--color-text)', border: on ? 'var(--color-accent)' : 'var(--color-divider)', onPick: () => this.setForm({ grade: g }) };
+      }),
+      last: last || {}, lastDate: last ? fmtDate(last.date, true) : '',
+      onScan: () => { if (scanning) return; this.setState({ scanning: true }); setTimeout(() => this.setState({ scanning: false, pScreen: 'landing' }), 900); },
+      goLanding: () => this.setState({ pScreen: 'landing', errors: {} }),
+      goForm: () => this.setState({ pScreen: 'form' }),
+      onName: e => this.setForm({ name: e.target.value }),
+      onGrade: e => this.setForm({ grade: e.target.value }),
+      onDept: e => this.setForm({ dept: e.target.value }),
+      onDate: e => this.setForm({ date: e.target.value }),
+      submit: this.submit,
+      finish: () => this.setState({ pScreen: 'scan', form: { name: '', grade: '', dept: '', date: todayISO() } }),
+      newMeeting: () => { const id = 'm' + Date.now(); this.setState(s => ({ meetings: [{ id, name: 'Untitled meeting', date: todayISO(), time: '', venue: '', attendees: [] }, ...s.meetings], selId: id, aScreen: 'detail' })); },
+      goList: () => this.setState({ aScreen: 'list' }),
+      goDetail: () => this.setState({ aScreen: 'detail' }),
+      openReport: () => this.setState({ aScreen: 'report' }),
+      setLive: () => this.setState({ liveId: selId, pScreen: 'scan' }),
+      setName: e => this.setSel({ name: e.target.value }),
+      setDate: e => this.setSel({ date: e.target.value }),
+      setTime: e => this.setSel({ time: e.target.value }),
+      setVenue: e => this.setSel({ venue: e.target.value }),
+      downloadCsv: this.downloadCsv, printReport: this.printReport,
+    };
+  }
+}
+</script>
+</body>
+</html>
