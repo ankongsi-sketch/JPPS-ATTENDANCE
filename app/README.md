@@ -25,10 +25,16 @@ Serve it over HTTPS in production, behind a reverse proxy or on a PaaS such as R
 
 ## How it works
 
-- **Participants** scan the program's QR code, which opens `/?p=<id>`. The bare `/` opens the *current* program. They choose Present or Absent, enter the 4-digit PIN, then fill in name, grade, department and, if absent, a reason. Date and time are recorded by the server.
-- **Admin** (button in the banner, password protected): rename the program and edit its dates, venue and PIN. You can also turn the PIN step and the department question on or off, show or download the QR code, close or reopen the form, see the live attendance analysis (refreshed every 5 s), delete records, copy to Excel, download a CSV or print a PDF report, and create, switch or delete programs.
-- The attendance analysis is shown only in Admin mode.
+- **Participants** scan the program's QR code, which opens `/?p=<id>`. The bare `/` opens the *current* program. They choose Present or Absent and enter the 4-digit PIN. Then they type part of their name and pick it from the staff list, and their grade and location fill in automatically. People who aren't on the list tap **Not on the list?** and type their name, grade and location or agency. Absent staff add a reason. The server records the date and time.
+- **Admin** (button in the banner, password protected): rename the program and edit its dates, venue and PIN. You can also turn the PIN step and the location question on or off, upload the staff list, show or download the QR code, close or reopen the form, see the live attendance analysis (refreshed every 5 s), delete records, copy to Excel, download a CSV or print a PDF report, and create, switch or delete programs.
+- The attendance analysis is shown only in Admin mode. Once a staff list is uploaded, it also counts and lists **staff not yet recorded** for the program, and those staff appear in the CSV, Copy to Excel and PDF report as well.
+
+## Staff list (PERJAWATAN)
+
+In Admin, use **Staff list → Upload PERJAWATAN (.xlsx)**. The app reads the sheet whose header row has `BIL`, `GRED`, `PENYANDANG JAWATAN` and `LOKASI`, skips vacant posts (`Kosong`), and stores the list in the database. It is never committed to git. Uploading a newer month's file replaces the list, and records already linked to staff who are still on it stay linked.
+
+The staff list is only sent to a phone after the correct program PIN is entered (or to a logged-in admin). If a program's PIN is turned off, anyone with the link can see the names.
 
 ## Customise
 
-Edit `config.js` to set the grade and department lists, which are still the design's placeholders, the organisation name and the program created on first start.
+Edit `config.js` for the LOKASI code names (`HQ` Ibu Pejabat, `K` Kuching, `M` Miri, `B` Bintulu, `JKR` JKR Sarawak; codes without a name, such as `H`, are shown as-is), the location choices and grade suggestions offered to guests, the organisation name and the program created on first start.

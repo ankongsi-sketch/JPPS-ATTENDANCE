@@ -5,19 +5,26 @@
   const fmtDate = d => { if (!d) return '—'; const [y, m, dd] = d.split('-').map(Number); return `${dd} ${MONTHS[m - 1]} ${y}`; };
   const shortDate = d => d.split('-').reverse().join('/');
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const fold = s => String(s).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9@ ]+/g, ' ').replace(/\s+/g, ' ').trim();
+  const OTHER = '__other__';
   const TRASH = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>';
 
   const S = {
-    cfg: { grades: [], departments: [], orgName: '' },
+    cfg: { grades: [], locations: [], orgName: '', hasStaff: false },
     programId: new URLSearchParams(location.search).get('p'),
     program: null, // public view of the program shown on this page
-    adminOn: false, full: null, programs: [], records: [], seenIds: null,
-    status: null, pin: ['', '', '', ''], pinOk: false,
-    grade: '', view: 'form',
+    adminOn: false, full: null, programs: [], records: [], missing: [], seenIds: null,
+    status: null, pin: ['', '', '', ''], pinOk: false, view: 'form',
+    staff: [], staffFor: null, // staff list, and the program id it was loaded for
+    picked: null, guest: false, suggestIdx: -1, suggestions: [],
   };
 
-  async function api(method, url, body) {
-    const res = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {}, body: body ? JSON.stringify(body) : undefined, credentials: 'same-origin' });
+  async function api(method, url, body, raw) {
+    const opts = { method, credentials: 'same-origin' };
+    if (raw) { opts.body = raw.body; opts.headers = raw.headers; }
+    else if (body) { opts.body = JSON.stringify(body); opts.headers = { 'Content-Type': 'application/json' }; }
+    let res;
+    try { res = await fetch(url, opts); } catch { return { ok: false, status: 0, data: { error: 'No connection. Please check your internet and try again.' } }; }
     let data = null;
     try { data = await res.json(); } catch { /* empty */ }
     if (res.status === 401 && url.startsWith('/api/admin/') && url !== '/api/admin/login') { setAdmin(false); toast('Your admin session has ended. Please log in again.', true); }
@@ -46,6 +53,8 @@
   }
 
   // ── Participant ──────────────────────────────────────────────────────────
+  const staffMode = () => S.staff.length > 0 && !S.guest;
+
   function renderParticipant() {
     const p = S.program;
     if (!p) return;
@@ -56,22 +65,89 @@
     const pinOk = S.pinOk || !p.requirePin;
     $('pin-step').hidden = !p.requirePin || S.pinOk;
     $('details').hidden = !pinOk;
-    $('dept-field').hidden = !p.askDept;
     $('reason-field').hidden = S.status !== 'absent';
     document.querySelectorAll('.status-tile').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.status === S.status)));
-    document.querySelectorAll('#grade-chips .chip').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.grade === S.grade)));
-    $('f-grade-other').hidden = S.grade !== 'Other';
+
+    // Name: pick from the staff list, or type details as a guest.
+    const sm = staffMode();
+    $('name-field').hidden = sm && !!S.picked;
+    $('picked').hidden = !(sm && S.picked);
+    $('guest-fields').hidden = sm;
+    $('dept-field').hidden = !p.askDept;
+    $('name-hint').hidden = !sm;
+    $('guest-toggle').hidden = !sm;
+    $('staff-toggle').hidden = !(S.staff.length && S.guest);
+    $('f-name').placeholder = sm ? 'Start typing your name' : 'e.g. Nurul Ain binti Jamil';
+    $('f-dept-other').hidden = $('f-dept').value !== OTHER;
+    if (sm && S.picked) {
+      $('picked-name').textContent = S.picked.name;
+      $('picked-tags').innerHTML = [S.picked.grade, p.askDept ? S.picked.location : ''].filter(Boolean).map(t => `<span class="tag tag-outline">${esc(t)}</span>`).join('');
+    }
   }
 
   function buildFormOptions() {
-    $('grade-chips').innerHTML = [...S.cfg.grades, 'Other'].map(g => `<button type="button" class="btn chip" data-grade="${esc(g)}" aria-pressed="false">${esc(g)}</button>`).join('');
-    $('f-dept').innerHTML = '<option value="">Select department</option>' + S.cfg.departments.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('');
+    $('grade-list').innerHTML = S.cfg.grades.map(g => `<option value="${esc(g)}">`).join('');
+    $('f-dept').innerHTML = '<option value="">Select location</option>' + S.cfg.locations.map(d => `<option value="${esc(d)}">${esc(d)}</option>`).join('') + `<option value="${OTHER}">Other agency / office</option>`;
+  }
+
+  async function loadStaff() {
+    const p = S.program;
+    if (!p || !S.cfg.hasStaff || S.staffFor === p.id) return;
+    const r = await api('POST', `/api/programs/${p.id}/staff`, { pin: S.pin.join('') });
+    if (r.ok && Array.isArray(r.data)) {
+      S.staff = r.data.map(s => ({ ...s, key: fold(s.name) }));
+      S.staffFor = p.id;
+      renderParticipant();
+    }
+  }
+
+  // Name search: every typed word must appear in the name; word starts rank first.
+  function searchStaff(qs) {
+    const words = fold(qs).split(' ').filter(Boolean);
+    if (!words.length) return [];
+    const scored = [];
+    for (const s of S.staff) {
+      if (!words.every(w => s.key.includes(w))) continue;
+      const parts = s.key.split(' ');
+      let score = 0;
+      words.forEach(w => { if (parts.some(pt => pt.startsWith(w))) score += 2; if (s.key.startsWith(w)) score += 3; });
+      scored.push([score, s]);
+    }
+    return scored.sort((a, b) => b[0] - a[0] || a[1].name.localeCompare(b[1].name)).slice(0, 8).map(x => x[1]);
+  }
+
+  function highlight(name, qs) {
+    const words = fold(qs).split(' ').filter(Boolean);
+    let html = esc(name);
+    words.forEach(w => { html = html.replace(new RegExp(`(${w.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'ig'), '<mark>$1</mark>'); });
+    return html;
+  }
+
+  function renderSuggest() {
+    const box = $('name-suggest');
+    const qs = $('f-name').value;
+    if (!staffMode() || fold(qs).length < 2) { box.hidden = true; $('f-name').setAttribute('aria-expanded', 'false'); return; }
+    S.suggestions = searchStaff(qs);
+    if (S.suggestIdx >= S.suggestions.length) S.suggestIdx = S.suggestions.length - 1;
+    box.innerHTML = S.suggestions.length
+      ? S.suggestions.map((s, i) => `<button type="button" class="suggest-item${i === S.suggestIdx ? ' is-active' : ''}" role="option" data-idx="${i}" aria-selected="${i === S.suggestIdx}">
+          <span class="s-name">${highlight(s.name, qs)}</span><span class="s-meta">${esc([s.grade, s.location].filter(Boolean).join(' · '))}</span></button>`).join('')
+      : '<div class="suggest-empty">No staff found with that name. Check the spelling, or tap "Not on the list?" below.</div>';
+    box.hidden = false;
+    $('f-name').setAttribute('aria-expanded', 'true');
+  }
+
+  function pickStaff(s) {
+    S.picked = s; S.suggestIdx = -1;
+    $('name-suggest').hidden = true;
+    setErr('name', '');
+    renderParticipant();
   }
 
   function setErr(key, msg) {
     const el = $('err-' + key);
     if (el) { el.textContent = msg || ''; el.hidden = !msg; }
-    const input = { name: $('f-name'), dept: $('f-dept'), grade: $('f-grade-other') }[key];
+    const input = { name: $('f-name'), dept: $('f-dept'), grade: $('f-grade') }[key];
     if (input) input.classList.toggle('has-error', !!msg);
   }
   const clearErrs = () => ['status', 'name', 'grade', 'dept', 'form'].forEach(k => setErr(k, ''));
@@ -97,6 +173,7 @@
       S.pinOk = true; pinUI('ok', 'PIN verified');
       toast('PIN verified. Please submit your attendance.');
       renderParticipant();
+      await loadStaff();
       $('f-name').focus();
     } else {
       resetPin(true);
@@ -127,27 +204,36 @@
   async function submit() {
     clearErrs();
     const p = S.program;
-    const grade = S.grade === 'Other' ? $('f-grade-other').value : S.grade;
-    const body = { status: S.status, pin: S.pin.join(''), name: $('f-name').value, grade, dept: $('f-dept').value, reason: $('f-reason').value };
+    if (staffMode() && !S.picked) {
+      setErr('name', $('f-name').value.trim() ? 'Please pick your name from the list, or tap "Not on the list?".' : 'Please type your name and pick it from the list.');
+      if (!S.status) setErr('status', 'Please choose Present or Absent.');
+      $('f-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+    const dept = $('f-dept').value === OTHER ? $('f-dept-other').value : $('f-dept').value;
+    const body = staffMode()
+      ? { status: S.status, pin: S.pin.join(''), staffId: S.picked.id, reason: $('f-reason').value }
+      : { status: S.status, pin: S.pin.join(''), name: $('f-name').value, grade: $('f-grade').value, dept, reason: $('f-reason').value };
     const btn = $('submit');
     btn.disabled = true;
     const r = await api('POST', `/api/programs/${p.id}/records`, body).finally(() => { btn.disabled = false; });
     if (r.status === 400 && r.data.errors) {
       Object.entries(r.data.errors).forEach(([k, v]) => setErr(k, v));
+      if (r.data.errors.name && S.picked) { S.picked = null; renderParticipant(); setErr('name', r.data.errors.name); }
       const first = ['status', 'name', 'grade', 'dept'].find(k => r.data.errors[k]);
-      ({ status: $('status-tiles'), name: $('f-name'), grade: $('grade-chips'), dept: $('f-dept') })[first]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      ({ status: $('status-tiles'), name: $('name-field'), grade: $('f-grade'), dept: $('f-dept') })[first]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
     if (r.status === 403 && r.data.field === 'pin') { resetPin(true); pinUI('error', r.data.error); renderParticipant(); return; }
     if (r.status === 409) { await loadProgram(); toast(r.data.error, true); return; }
     if (!r.ok) { setErr('form', r.data.error || 'Something went wrong. Please try again.'); return; }
 
-    const name = body.name.trim().replace(/\s+/g, ' ');
-    const rows = [['Name', name], ['Status', S.status === 'present' ? 'Present' : 'Absent'], ['Grade', grade.trim().toUpperCase()]];
-    if (p.askDept) rows.push(['Department', body.dept]);
+    const who = staffMode() ? S.picked : { name: body.name.trim().replace(/\s+/g, ' '), grade: body.grade.trim().toUpperCase(), location: dept.trim() };
+    const rows = [['Name', who.name], ['Status', S.status === 'present' ? 'Present' : 'Absent'], ['Grade', who.grade]];
+    if (p.askDept) rows.push(['Location', who.location]);
     if (S.status === 'absent' && body.reason.trim()) rows.push(['Reason', body.reason.trim()]);
     rows.push(['Date', fmtDate(r.data.date)], ['Time', r.data.time]);
-    $('done-summary').innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join('');
+    $('done-summary').innerHTML = rows.map(([k, v]) => `<dt>${esc(k)}</dt><dd>${esc(v || '—')}</dd>`).join('');
     resetForm();
     S.view = 'done';
     renderParticipant();
@@ -157,31 +243,45 @@
   }
 
   function resetForm() {
-    S.status = null; S.grade = '';
-    ['f-name', 'f-grade-other', 'f-dept', 'f-reason'].forEach(id => { $(id).value = ''; });
+    S.status = null; S.picked = null; S.guest = false; S.suggestIdx = -1;
+    ['f-name', 'f-grade', 'f-dept', 'f-dept-other', 'f-reason'].forEach(id => { $(id).value = ''; });
+    $('name-suggest').hidden = true;
     resetPin(false); pinUI(null); clearErrs();
   }
 
   // ── Admin ────────────────────────────────────────────────────────────────
   function setAdmin(on) {
     S.adminOn = on;
-    ['admin-panel', 'history-panel', 'analysis-panel'].forEach(id => { $(id).hidden = !on; });
+    ['admin-panel', 'history-panel', 'staff-panel', 'analysis-panel'].forEach(id => { $(id).hidden = !on; });
     clearInterval(S.poll);
-    if (on) { S.seenIds = null; refreshAdmin(); S.poll = setInterval(() => { if (!document.hidden) refreshAdmin(); }, 5000); }
+    if (on) { S.seenIds = null; refreshAdmin(); refreshStaffInfo(); S.poll = setInterval(() => { if (!document.hidden) refreshAdmin(); }, 5000); }
     renderBanner();
   }
 
   async function refreshAdmin() {
     if (!S.program) return;
     const id = S.program.id;
-    const [full, list, recs] = await Promise.all([
-      api('GET', `/api/admin/programs/${id}`), api('GET', '/api/admin/programs'), api('GET', `/api/admin/programs/${id}/records`),
+    const [full, list, recs, missing] = await Promise.all([
+      api('GET', `/api/admin/programs/${id}`), api('GET', '/api/admin/programs'),
+      api('GET', `/api/admin/programs/${id}/records`), api('GET', `/api/admin/programs/${id}/missing`),
     ]);
     if (!S.adminOn || id !== S.program.id) return;
     if (full.ok) { const first = !S.full || S.full.id !== full.data.id; S.full = full.data; S.program = { ...S.program, ...full.data }; renderAdminFields(first); renderParticipant(); }
     if (list.ok) { S.programs = list.data; renderHistory(); }
+    if (missing.ok) S.missing = missing.data;
     if (recs.ok) { S.records = recs.data; renderAnalysis(); }
     renderBanner();
+  }
+
+  async function refreshStaffInfo() {
+    const r = await api('GET', '/api/admin/staff');
+    if (!r.ok) return;
+    const { count, fileName, updatedAt } = r.data;
+    $('staff-count').textContent = `${count} staff`;
+    $('staff-info').textContent = count
+      ? `Participants pick their name from this list. Updated ${new Date(updatedAt).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}${fileName ? ` from ${fileName}` : ''}.`
+      : 'No staff list uploaded. Participants type their own name, grade and location.';
+    $('staff-upload-label').textContent = count ? 'Upload a newer PERJAWATAN (.xlsx)' : 'Upload PERJAWATAN (.xlsx)';
   }
 
   function renderAdminFields(fillInputs) {
@@ -234,6 +334,13 @@
         <button type="button" class="btn btn-icon" data-delete="${r.id}" title="Delete record" aria-label="Delete record for ${esc(r.name)}">${TRASH}</button>
       </div>`).join('');
     if (fresh.length) setTimeout(() => document.querySelectorAll('.rec.is-new').forEach(el => el.classList.remove('is-new')), 2600);
+
+    const hasStaff = S.cfg.hasStaff;
+    $('missing-box').hidden = !hasStaff;
+    $('missing-details').hidden = !hasStaff || !S.missing.length;
+    $('missing-n').textContent = S.missing.length;
+    $('missing-n2').textContent = S.missing.length;
+    $('missing-list').innerHTML = S.missing.map(s => `<div class="missing-row"><span>${esc(s.name)}</span><span>${esc([s.grade, s.location].filter(Boolean).join(' · '))}</span></div>`).join('');
   }
 
   async function patchProgram(changes, msg) {
@@ -257,8 +364,12 @@
 
   function copyExcel() {
     const p = S.full;
-    const rows = [[p.name], ['No', 'Name', 'Grade', 'Department', 'Status', 'Reason', 'Date', 'Time']];
+    const rows = [[p.name], ['No', 'Name', 'Grade', 'Location', 'Status', 'Reason', 'Date', 'Time']];
     S.records.forEach((r, i) => rows.push([i + 1, r.name, r.grade, r.dept, r.status === 'present' ? 'Present' : 'Absent', r.reason, fmtDate(r.date), r.time]));
+    if (S.cfg.hasStaff && S.missing.length) {
+      rows.push([], [`Staff not yet recorded (${S.missing.length})`], ['No', 'Name', 'Grade', 'Location']);
+      S.missing.forEach((s, i) => rows.push([i + 1, s.name, s.grade, s.location]));
+    }
     const tsv = rows.map(r => r.map(c => String(c).replace(/[\t\n]/g, ' ')).join('\t')).join('\n');
     const done = () => toast('Copied. Paste into Excel.');
     const fallback = () => {
@@ -272,11 +383,25 @@
     const p = S.full, recs = S.records;
     const present = recs.filter(r => r.status === 'present').length;
     const rows = recs.map((r, i) => `<tr><td>${i + 1}</td><td>${esc(r.name)}</td><td>${esc(r.grade)}</td><td>${esc(r.dept)}</td><td>${r.status === 'present' ? 'Present' : 'Absent'}</td><td>${esc(r.reason)}</td><td>${esc(shortDate(r.date))}</td><td>${esc(r.time)}</td></tr>`).join('');
-    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Attendance report · ${esc(p.name)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Barlow+Condensed:wght@600&display=swap" rel="stylesheet"><style>body{font:11pt/1.45 Barlow,sans-serif;margin:20mm 18mm;color:#1d1f20}h1{font:600 20pt/1.15 'Barlow Condensed';margin:14pt 0 6pt}.org{display:flex;align-items:center;gap:10pt;font:600 14pt 'Barlow Condensed';border-bottom:1.5px solid #1d1f20;padding-bottom:8pt}.org img{width:40pt;height:40pt;object-fit:contain}.org small{display:block;font:400 9pt Barlow;color:#5d5d60}p{margin:0 0 2pt}table{width:100%;border-collapse:collapse;margin-top:14pt}th{text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#5d5d60;border-bottom:1px solid #999;padding:5pt}td{padding:6pt 5pt;border-bottom:1px solid #ddd}.foot{margin-top:18pt;font-size:8pt;color:#5d5d60}</style></head><body><div class="org"><img src="${location.origin}/assets/jpps-logo.png" alt=""><div>${esc(S.cfg.orgName)}<small>Attendance report</small></div></div><h1>${esc(p.name)}</h1><p>Program dates: ${esc(p.dates || '—')}</p><p>Venue: ${esc(p.venue || '—')}</p><p><b>Present: ${present} · Absent: ${recs.length - present}</b></p><table><tr><th>No</th><th>Name</th><th>Grade</th><th>Department</th><th>Status</th><th>Reason</th><th>Date</th><th>Time</th></tr>${rows}</table><p class="foot">Generated ${esc(new Date().toLocaleString('en-GB'))}</p></body></html>`;
+    const showMissing = S.cfg.hasStaff && S.missing.length;
+    const missing = showMissing ? `<h2>Staff not yet recorded (${S.missing.length})</h2><table><tr><th>No</th><th>Name</th><th>Grade</th><th>Location</th></tr>${S.missing.map((s, i) => `<tr><td>${i + 1}</td><td>${esc(s.name)}</td><td>${esc(s.grade)}</td><td>${esc(s.location)}</td></tr>`).join('')}</table>` : '';
+    const html = `<!doctype html><html><head><meta charset="utf-8"><title>Attendance report · ${esc(p.name)}</title><link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500&family=Barlow+Condensed:wght@600&display=swap" rel="stylesheet"><style>body{font:11pt/1.45 Barlow,sans-serif;margin:20mm 18mm;color:#1d1f20}h1{font:600 20pt/1.15 'Barlow Condensed';margin:14pt 0 6pt}h2{font:600 14pt 'Barlow Condensed';margin:20pt 0 0;break-before:auto}.org{display:flex;align-items:center;gap:10pt;font:600 14pt 'Barlow Condensed';border-bottom:1.5px solid #1d1f20;padding-bottom:8pt}.org img{width:40pt;height:40pt;object-fit:contain}.org small{display:block;font:400 9pt Barlow;color:#5d5d60}p{margin:0 0 2pt}table{width:100%;border-collapse:collapse;margin-top:10pt}th{text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#5d5d60;border-bottom:1px solid #999;padding:5pt}td{padding:6pt 5pt;border-bottom:1px solid #ddd}tr{break-inside:avoid}.foot{margin-top:18pt;font-size:8pt;color:#5d5d60}</style></head><body><div class="org"><img src="${location.origin}/assets/jpps-logo.png" alt=""><div>${esc(S.cfg.orgName)}<small>Attendance report</small></div></div><h1>${esc(p.name)}</h1><p>Program dates: ${esc(p.dates || '—')}</p><p>Venue: ${esc(p.venue || '—')}</p><p><b>Present: ${present} · Absent: ${recs.length - present}${showMissing ? ` · Not yet recorded: ${S.missing.length}` : ''}</b></p><table><tr><th>No</th><th>Name</th><th>Grade</th><th>Location</th><th>Status</th><th>Reason</th><th>Date</th><th>Time</th></tr>${rows}</table>${missing}<p class="foot">Generated ${esc(new Date().toLocaleString('en-GB'))}</p></body></html>`;
     const w = window.open('', '_blank');
     if (!w) { toast('Please allow pop-ups to save the PDF.', true); return; }
     w.document.write(html); w.document.close();
     setTimeout(() => { w.focus(); w.print(); }, 700);
+  }
+
+  async function uploadStaff(file) {
+    if (!file) return;
+    $('staff-upload-label').textContent = 'Uploading…';
+    const r = await api('POST', '/api/admin/staff', null, { body: file, headers: { 'Content-Type': 'application/octet-stream', 'X-File-Name': encodeURIComponent(file.name) } });
+    $('staff-file').value = '';
+    if (!r.ok) { toast(r.data.error || 'Upload failed.', true); refreshStaffInfo(); return; }
+    toast(`Staff list updated: ${r.data.count} staff.`);
+    S.cfg.hasStaff = r.data.count > 0; S.staffFor = null;
+    const cfg = await api('GET', '/api/config'); if (cfg.ok) { S.cfg = cfg.data; buildFormOptions(); }
+    refreshStaffInfo(); refreshAdmin(); loadStaff();
   }
 
   // ── Loading ──────────────────────────────────────────────────────────────
@@ -289,8 +414,10 @@
       return false;
     }
     $('load-error').hidden = true;
+    if (S.program && S.program.id !== r.data.id) { S.staff = []; S.staffFor = null; }
     S.program = r.data;
     renderBanner(); renderParticipant();
+    if (!S.program.requirePin || S.pinOk) loadStaff();
     return true;
   }
 
@@ -300,13 +427,29 @@
       const b = e.target.closest('.status-tile'); if (!b) return;
       S.status = b.dataset.status; setErr('status', ''); renderParticipant();
     });
-    $('grade-chips').addEventListener('click', e => {
-      const b = e.target.closest('.chip'); if (!b) return;
-      S.grade = b.dataset.grade; setErr('grade', ''); renderParticipant();
-      if (S.grade === 'Other') $('f-grade-other').focus();
+
+    // Name picker
+    $('f-name').addEventListener('input', () => { setErr('name', ''); S.suggestIdx = 0; renderSuggest(); });
+    $('f-name').addEventListener('focus', renderSuggest);
+    $('f-name').addEventListener('blur', () => setTimeout(() => { $('name-suggest').hidden = true; $('f-name').setAttribute('aria-expanded', 'false'); }, 150));
+    $('f-name').addEventListener('keydown', e => {
+      if ($('name-suggest').hidden || !S.suggestions.length) return;
+      if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault();
+        const n = S.suggestions.length;
+        S.suggestIdx = ((S.suggestIdx < 0 ? -1 : S.suggestIdx) + (e.key === 'ArrowDown' ? 1 : -1) + n) % n;
+        renderSuggest();
+      } else if (e.key === 'Enter' && S.suggestIdx >= 0) { e.preventDefault(); pickStaff(S.suggestions[S.suggestIdx]); }
+      else if (e.key === 'Escape') { $('name-suggest').hidden = true; }
     });
-    $('f-name').addEventListener('input', () => setErr('name', ''));
-    $('f-dept').addEventListener('change', () => setErr('dept', ''));
+    $('name-suggest').addEventListener('mousedown', e => e.preventDefault()); // keep focus so the click lands
+    $('name-suggest').addEventListener('click', e => { const b = e.target.closest('.suggest-item'); if (b) pickStaff(S.suggestions[Number(b.dataset.idx)]); });
+    $('picked-change').addEventListener('click', () => { S.picked = null; renderParticipant(); $('f-name').focus(); $('f-name').select(); });
+    $('guest-toggle').addEventListener('click', () => { S.guest = true; S.picked = null; $('name-suggest').hidden = true; clearErrs(); renderParticipant(); $('f-name').focus(); });
+    $('staff-toggle').addEventListener('click', () => { S.guest = false; clearErrs(); renderParticipant(); $('f-name').focus(); });
+    $('f-grade').addEventListener('input', () => setErr('grade', ''));
+    $('f-dept').addEventListener('change', () => { setErr('dept', ''); renderParticipant(); if ($('f-dept').value === OTHER) $('f-dept-other').focus(); });
+    $('f-dept-other').addEventListener('input', () => setErr('dept', ''));
     $('submit').addEventListener('click', submit);
     $('done-again').addEventListener('click', () => { S.view = 'form'; renderParticipant(); });
 
@@ -333,10 +476,11 @@
     $('a-pin').addEventListener('input', () => { $('a-pin').value = $('a-pin').value.replace(/\D/g, '').slice(0, 4); });
     $('a-pin').addEventListener('change', () => patchProgram({ pin: $('a-pin').value }, 'PIN updated.'));
     $('a-require-pin').addEventListener('change', e => patchProgram({ requirePin: e.target.checked }, e.target.checked ? 'PIN required.' : 'PIN step turned off.'));
-    $('a-ask-dept').addEventListener('change', e => patchProgram({ askDept: e.target.checked }, e.target.checked ? 'Department question on.' : 'Department question off.'));
+    $('a-ask-dept').addEventListener('change', e => patchProgram({ askDept: e.target.checked }, e.target.checked ? 'Location question on.' : 'Location question off.'));
     $('toggle-closed').addEventListener('click', () => { const c = !S.full.closed; patchProgram({ closed: c }, c ? 'Form closed. No new submissions.' : 'Form reopened.'); });
     $('pdf-report').addEventListener('click', printReport);
     $('copy-excel').addEventListener('click', copyExcel);
+    $('staff-file').addEventListener('change', e => uploadStaff(e.target.files[0]));
     $('set-current').addEventListener('click', async () => {
       const r = await api('POST', `/api/admin/programs/${S.full.id}/activate`);
       if (r.ok) { toast('This program now opens at the main link.'); refreshAdmin(); }

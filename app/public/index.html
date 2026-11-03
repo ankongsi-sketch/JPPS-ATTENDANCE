@@ -52,7 +52,7 @@
       </div>
       <div class="toggles">
         <label class="check"><input type="checkbox" id="a-require-pin"><span class="box"></span>Require PIN</label>
-        <label class="check"><input type="checkbox" id="a-ask-dept"><span class="box"></span>Ask for department</label>
+        <label class="check"><input type="checkbox" id="a-ask-dept"><span class="box"></span>Ask for location</label>
       </div>
       <div class="qr-row">
         <button type="button" class="qr-box" id="qr-open" title="Enlarge QR"><img id="qr-small" alt="Attendance QR code"></button>
@@ -92,6 +92,18 @@
       <div class="program-list" id="program-list"></div>
     </section>
 
+    <!-- Staff list -->
+    <section id="staff-panel" class="blueprint card-pad" hidden>
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="row-between"><h2 class="section-title">Staff list</h2><span class="tag tag-accent" id="staff-count">0 staff</span></div>
+      <span class="muted" id="staff-info">No staff list uploaded. Participants type their own name, grade and location.</span>
+      <label class="btn btn-secondary btn-46 upload-btn">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/></svg>
+        <span id="staff-upload-label">Upload PERJAWATAN (.xlsx)</span>
+        <input type="file" id="staff-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
+      </label>
+    </section>
+
     <!-- Participant form -->
     <section id="form-panel" class="blueprint card-pad form-card" hidden>
       <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
@@ -116,21 +128,40 @@
       </div>
 
       <div class="stack-16" id="details" hidden>
-        <div class="field">
+        <div class="field" id="name-field">
           <label for="f-name">Full name</label>
-          <input class="input input-48" id="f-name" placeholder="e.g. Nurul Ain binti Jamil" autocomplete="name">
+          <div class="picker">
+            <input class="input input-48" id="f-name" placeholder="e.g. Nurul Ain binti Jamil" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="name-suggest" aria-expanded="false">
+            <div class="suggest" id="name-suggest" role="listbox" hidden></div>
+          </div>
+          <span class="hint" id="name-hint" hidden>Type part of your name, then pick it from the list.</span>
           <div class="err" id="err-name" hidden></div>
+          <button type="button" class="link-btn" id="guest-toggle" hidden>Not on the list? Enter your details</button>
         </div>
-        <div class="field">
-          <label>Grade</label>
-          <div class="grade-grid" id="grade-chips"></div>
-          <input class="input input-44 upper" id="f-grade-other" placeholder="Type your grade" hidden>
-          <div class="err" id="err-grade" hidden></div>
+
+        <div class="picked" id="picked" hidden>
+          <div class="picked-main">
+            <span class="picked-label">Recording attendance for</span>
+            <span class="picked-name" id="picked-name"></span>
+            <div class="picked-tags" id="picked-tags"></div>
+          </div>
+          <button type="button" class="btn btn-ghost" id="picked-change">Change</button>
         </div>
-        <div class="field" id="dept-field">
-          <label for="f-dept">Department / unit</label>
-          <select class="input input-48" id="f-dept"><option value="">Select department</option></select>
-          <div class="err" id="err-dept" hidden></div>
+
+        <div class="stack-16" id="guest-fields" hidden>
+          <div class="field">
+            <label for="f-grade">Grade</label>
+            <input class="input input-48 upper" id="f-grade" list="grade-list" placeholder="e.g. J9" autocomplete="off">
+            <datalist id="grade-list"></datalist>
+            <div class="err" id="err-grade" hidden></div>
+          </div>
+          <div class="field" id="dept-field">
+            <label for="f-dept">Location</label>
+            <select class="input input-48" id="f-dept"><option value="">Select location</option></select>
+            <input class="input input-48" id="f-dept-other" placeholder="Agency or office" hidden>
+            <div class="err" id="err-dept" hidden></div>
+          </div>
+          <button type="button" class="link-btn" id="staff-toggle" hidden>Back to staff list</button>
         </div>
         <div class="field" id="reason-field" hidden>
           <label for="f-reason">Reason for absence</label>
@@ -179,9 +210,14 @@
       <div class="counts">
         <div class="count-present"><span class="count-num" id="present-n">0</span><span class="count-label">Present</span></div>
         <div class="count-absent"><span class="count-num" id="absent-n">0</span><span class="count-label">Absent</span></div>
+        <div class="count-missing" id="missing-box" hidden><span class="count-num" id="missing-n">0</span><span class="count-label">Not recorded</span></div>
       </div>
       <span class="empty" id="recs-empty" hidden>No records yet</span>
       <div id="rec-list"></div>
+      <details class="missing" id="missing-details" hidden>
+        <summary>Staff not yet recorded (<span id="missing-n2">0</span>)</summary>
+        <div id="missing-list"></div>
+      </details>
     </section>
   </main>
 </div>
