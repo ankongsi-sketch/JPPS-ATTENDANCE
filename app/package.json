@@ -1,0 +1,17 @@
+{
+  "name": "jpps-attendance",
+  "version": "1.0.0",
+  "description": "Attendance system for Jabatan Perkhidmatan Pembetungan Sarawak",
+  "main": "server.js",
+  "scripts": {
+    "start": "node --no-warnings=ExperimentalWarning server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.3",
+    "qrcode": "^1.5.4"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.13"
+  }
+}

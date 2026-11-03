@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1651a1">
+<title>Attendance · JPPS</title>
+<link rel="icon" href="assets/jpps-logo.png">
+<link rel="stylesheet" href="industry.css">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<div class="app">
+  <div id="toast" class="toast" role="status" aria-live="polite" hidden>
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+    <span id="toast-text"></span>
+  </div>
+
+  <header class="banner">
+    <div class="banner-top">
+      <div class="org">
+        <img src="assets/jpps-logo.png" alt="Jabatan Perkhidmatan Pembetungan Sarawak logo" class="org-logo">
+        <span class="org-name" id="org-name">Jabatan Perkhidmatan<br>Pembetungan Sarawak</span>
+      </div>
+      <button type="button" class="btn admin-btn" id="admin-btn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        <span id="admin-label">Admin</span>
+      </button>
+    </div>
+    <div class="banner-title">
+      <span class="kicker">Attendance system</span>
+      <h1 id="prog-name">&nbsp;</h1>
+    </div>
+    <div class="banner-meta">
+      <div><span class="meta-label">Date</span><span id="prog-dates">—</span></div>
+      <div><span class="meta-label">Venue</span><span id="prog-venue">—</span></div>
+    </div>
+  </header>
+
+  <main class="content">
+    <p id="load-error" class="notice-error" hidden></p>
+
+    <!-- Admin panel -->
+    <section id="admin-panel" class="blueprint card-pad admin-card" hidden>
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="row-between"><h2 class="section-title">Admin</h2><span class="tag tag-accent">Secretariat only</span></div>
+      <div class="field"><label for="a-name">Program name</label><textarea class="input" id="a-name" rows="2" data-key="name"></textarea></div>
+      <div class="field"><label for="a-dates">Program dates</label><input class="input" id="a-dates" data-key="dates" placeholder="e.g. 20–22 November 2026"></div>
+      <div class="grid-venue">
+        <div class="field"><label for="a-venue">Venue</label><input class="input" id="a-venue" data-key="venue"></div>
+        <div class="field"><label for="a-pin">PIN</label><input class="input pin-input" id="a-pin" data-key="pin" inputmode="numeric" maxlength="4" autocomplete="off"></div>
+      </div>
+      <div class="toggles">
+        <label class="check"><input type="checkbox" id="a-require-pin"><span class="box"></span>Require PIN</label>
+        <label class="check"><input type="checkbox" id="a-ask-dept"><span class="box"></span>Ask for department</label>
+      </div>
+      <div class="qr-row">
+        <button type="button" class="qr-box" id="qr-open" title="Enlarge QR"><img id="qr-small" alt="Attendance QR code"></button>
+        <div class="qr-text">
+          <span>Display this QR in the room. It opens this page. Share the PIN out loud at the start of the meeting.</span>
+          <span id="current-tag-wrap"></span>
+        </div>
+      </div>
+      <div class="grid-2">
+        <button type="button" class="btn btn-secondary btn-46" id="toggle-closed">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          <span id="closed-label">Close form</span>
+        </button>
+        <button type="button" class="btn btn-primary blueprint btn-46" id="pdf-report"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>PDF report</button>
+        <a class="btn btn-secondary btn-46" id="csv-link" download>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>
+          Excel (CSV)
+        </a>
+        <button type="button" class="btn btn-secondary btn-46" id="set-current">Set as current</button>
+      </div>
+      <button type="button" class="btn btn-ghost danger-link" id="delete-program">Delete this program</button>
+    </section>
+
+    <!-- Program history -->
+    <section id="history-panel" class="blueprint card-pad" hidden>
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="row-between">
+        <h2 class="section-title">Programs</h2>
+        <button type="button" class="btn btn-secondary btn-40" id="new-program">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>New
+        </button>
+      </div>
+      <div class="stats">
+        <div><span class="stat-label">Programs</span><span class="stat-num" id="h-count">0</span></div>
+        <div><span class="stat-label">Total records</span><span class="stat-num" id="h-total">0</span></div>
+      </div>
+      <div class="program-list" id="program-list"></div>
+    </section>
+
+    <!-- Participant form -->
+    <section id="form-panel" class="blueprint card-pad form-card" hidden>
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="stack-10">
+        <h2 class="section-title">Attendance status</h2>
+        <div class="grid-2" id="status-tiles">
+          <button type="button" class="status-tile" data-status="present" aria-pressed="false"><span class="glyph">✓</span>Present</button>
+          <button type="button" class="status-tile" data-status="absent" aria-pressed="false"><span class="glyph">✕</span>Absent</button>
+        </div>
+        <span class="err" id="err-status" hidden></span>
+      </div>
+
+      <div class="stack-10" id="pin-step" hidden>
+        <h2 class="section-title">Enter PIN (4 digits)</h2>
+        <div class="pin-boxes" id="pin-boxes">
+          <input class="input pin-box" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 1">
+          <input class="input pin-box" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 2">
+          <input class="input pin-box" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 3">
+          <input class="input pin-box" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN digit 4">
+        </div>
+        <span class="pin-msg" id="pin-msg">Your PIN is given by the secretariat</span>
+      </div>
+
+      <div class="stack-16" id="details" hidden>
+        <div class="field">
+          <label for="f-name">Full name</label>
+          <input class="input input-48" id="f-name" placeholder="e.g. Nurul Ain binti Jamil" autocomplete="name">
+          <div class="err" id="err-name" hidden></div>
+        </div>
+        <div class="field">
+          <label>Grade</label>
+          <div class="grade-grid" id="grade-chips"></div>
+          <input class="input input-44 upper" id="f-grade-other" placeholder="Type your grade" hidden>
+          <div class="err" id="err-grade" hidden></div>
+        </div>
+        <div class="field" id="dept-field">
+          <label for="f-dept">Department / unit</label>
+          <select class="input input-48" id="f-dept"><option value="">Select department</option></select>
+          <div class="err" id="err-dept" hidden></div>
+        </div>
+        <div class="field" id="reason-field" hidden>
+          <label for="f-reason">Reason for absence</label>
+          <input class="input input-48" id="f-reason" placeholder="e.g. Medical leave, on site">
+        </div>
+        <div class="info">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+          <span>Tap Submit attendance to complete your record. Today's date is added automatically.</span>
+        </div>
+        <span class="err" id="err-form" hidden></span>
+        <button type="button" class="btn btn-primary blueprint btn-submit" id="submit"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>Submit attendance</button>
+      </div>
+    </section>
+
+    <!-- Confirmation -->
+    <section id="done-panel" class="blueprint card-pad done-card" hidden>
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="done-head">
+        <div class="blueprint check-mark"><i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+        </div>
+        <h2 class="done-title">Attendance recorded</h2>
+        <span class="muted">Thank you. You may close this page.</span>
+      </div>
+      <dl class="summary" id="done-summary"></dl>
+      <button type="button" class="btn btn-secondary btn-46" id="done-again">Submit for another person</button>
+    </section>
+
+    <!-- Closed -->
+    <section id="closed-panel" class="blueprint card-pad closed-card" hidden>
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+      <h2 class="closed-title">Attendance form is closed</h2>
+      <span class="muted">Please contact the secretariat if you have not recorded your attendance.</span>
+    </section>
+
+    <!-- Analysis (admin only) -->
+    <section id="analysis-panel" class="blueprint card-pad analysis-card" hidden>
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="row-between">
+        <h2 class="section-title">Attendance analysis</h2>
+        <button type="button" class="btn btn-secondary btn-38" id="copy-excel">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copy to Excel
+        </button>
+      </div>
+      <div class="counts">
+        <div class="count-present"><span class="count-num" id="present-n">0</span><span class="count-label">Present</span></div>
+        <div class="count-absent"><span class="count-num" id="absent-n">0</span><span class="count-label">Absent</span></div>
+      </div>
+      <span class="empty" id="recs-empty" hidden>No records yet</span>
+      <div id="rec-list"></div>
+    </section>
+  </main>
+</div>
+
+<!-- Login dialog -->
+<div class="dialog-backdrop" id="login-dialog" hidden>
+  <form class="dialog" id="login-form">
+    <div class="dialog-title">Secretariat login</div>
+    <div class="field"><label for="login-pass">Admin password</label><input class="input input-44" type="password" id="login-pass" autocomplete="current-password" required></div>
+    <span class="err" id="login-err" hidden></span>
+    <div class="dialog-actions">
+      <button type="button" class="btn btn-secondary btn-40" id="login-cancel">Cancel</button>
+      <button type="submit" class="btn btn-primary btn-40">Log in</button>
+    </div>
+  </form>
+</div>
+
+<!-- QR dialog -->
+<div class="dialog-backdrop" id="qr-dialog" hidden>
+  <div class="dialog qr-dialog">
+    <div class="dialog-title" id="qr-title">Attendance QR</div>
+    <img id="qr-large" class="qr-large" alt="Attendance QR code">
+    <a id="qr-url" class="qr-url" target="_blank" rel="noopener"></a>
+    <div class="dialog-actions">
+      <a class="btn btn-secondary btn-40" id="qr-download" download="attendance-qr.svg">Download SVG</a>
+      <button type="button" class="btn btn-primary btn-40" id="qr-close">Close</button>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
